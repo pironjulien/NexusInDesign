@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.0.2] - 2026-10-31
+
+### Fixed
+- Codex desktop can start the engine from its official versioned `%LOCALAPPDATA%\OpenAI\Codex\bin` folder.
+  The exact `codex.exe` name and a valid OpenAI Authenticode signature remain required; explicit allowed-parent
+  paths still replace the defaults.
+
 ## [4.0.1] - 2026-10-31
 
 ### Changed

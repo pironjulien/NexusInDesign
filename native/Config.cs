@@ -63,6 +63,7 @@ internal sealed record Config
             Path.Combine(programFiles, "WindowsApps"),
             Path.Combine(localAppData, "AnthropicClaude"),
             Path.Combine(localAppData, "Programs"),
+            Path.Combine(localAppData, "OpenAI", "Codex", "bin"),
             Path.Combine(profile, ".local", "bin"),
         ];
 

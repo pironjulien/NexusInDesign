@@ -109,6 +109,22 @@ public sealed class EngineUnitTests : IDisposable
     }
 
     [Fact]
+    public void Codex_desktop_versioned_engine_is_in_the_default_parent_roots()
+    {
+        string profile = File("profile"), local = Path.Combine(profile, "AppData", "Local");
+        var environment = new Dictionary<string, string?> { ["USERPROFILE"] = profile, ["LOCALAPPDATA"] = local };
+        var defaults = Config.Load(environment);
+        string codex = Path.Combine(local, "OpenAI", "Codex", "bin");
+        Assert.Contains(defaults.AllowedParentPaths, root => PathPolicy.IsInside(root, Path.Combine(codex, "build-id", "codex.exe")));
+        Assert.DoesNotContain(defaults.AllowedParentPaths, root => PathPolicy.IsInside(root, Path.Combine(codex + "-evil", "codex.exe")));
+        Assert.Contains(defaults.AllowedParents, parent => parent.ExecutableName == "codex.exe" && parent.Signer == "OpenAI");
+
+        string explicitRoot = File("explicit-agent");
+        environment["INDESIGN_MCP_ALLOWED_PARENT_PATHS"] = explicitRoot;
+        Assert.Equal([explicitRoot], Config.Load(environment).AllowedParentPaths);
+    }
+
+    [Fact]
     public void The_test_host_is_not_an_allowed_parent()
     {
         var policy = new ParentProcessPolicy([new AllowedParent("claude.exe", "Anthropic, PBC"), new AllowedParent("codex.exe", "OpenAI")],
