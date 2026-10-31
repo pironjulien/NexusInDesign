@@ -1,0 +1,45 @@
+# Dépendances et rapports
+node_modules/
+coverage/
+.nyc_output/
+.npm/
+*.tgz
+
+# Données d'exécution locales
+work/
+dist/
+logs/
+*.log
+*.pid
+*.tmp
+*.temp
+.cache/
+
+# Documents et verrous InDesign
+*.indd
+*.indt
+*.indb
+*.idlk
+*.jsx~
+*.jsx.bak
+
+# Paquets générés
+*.ccx
+
+# Secrets et configurations locales
+.env
+*.token
+*bridge-secret*
+*pairing-secret*
+.cursor-tools.env
+.cursor-tools.config.json
+codex-plugin/.mcp.json
+
+# Éditeurs et système
+.vscode/
+.idea/
+*.sublime-*
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

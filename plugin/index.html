@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>InDesign MCP Secure</title>
+  <style>
+    :root {
+      --blue: #000091;
+      --red: #e1000f;
+      --green: #18753c;
+      --grey-50: #f6f6f6;
+      --grey-200: #dddddd;
+      --grey-700: #3a3a3a;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--grey-50);
+      color: var(--grey-700);
+      font: 13px/1.45 Arial, sans-serif;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      color: var(--blue);
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .version {
+      margin-bottom: 16px;
+      color: #666;
+      font-size: 11px;
+    }
+
+    .card {
+      padding: 14px;
+      border: 1px solid var(--grey-200);
+      border-left: 4px solid var(--blue);
+      border-radius: 3px;
+      background: white;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #929292;
+    }
+
+    .dot.connected { background: var(--green); }
+    .dot.waiting { background: #b34000; }
+    .dot.error { background: var(--red); }
+
+    #status {
+      font-weight: 700;
+    }
+
+    #detail {
+      min-height: 38px;
+      margin: 0;
+      color: #666;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input {
+      min-height: 32px;
+      box-sizing: border-box;
+      border: 1px solid var(--grey-200);
+      border-radius: 3px;
+      padding: 6px 8px;
+      background: white;
+      color: var(--grey-700);
+      font: 600 13px/1.2 monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    button {
+      min-height: 32px;
+      border: 1px solid var(--blue);
+      border-radius: 3px;
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+    }
+
+    button.secondary {
+      background: white;
+      color: var(--blue);
+    }
+
+    button.danger {
+      border-color: var(--red);
+      background: white;
+      color: var(--red);
+    }
+
+    button:disabled {
+      border-color: #aaa;
+      background: #ddd;
+      color: #777;
+    }
+
+    .security {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--grey-200);
+      font-size: 11px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>InDesign MCP Secure</h1>
+  <div class="version">Extension UXP 3.2.2</div>
+
+  <section class="card" aria-live="polite">
+    <div class="status-row">
+      <span id="statusDot" class="dot"></span>
+      <span id="status">Initialisation</span>
+    </div>
+    <p id="detail">Connexion locale en cours.</p>
+
+    <div class="actions">
+      <label for="pairingCode">Code temporaire donné par Codex</label>
+      <input id="pairingCode" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="19" placeholder="ABCD-EF01-2345-6789">
+      <button id="pairButton" type="button" disabled>Appairer ce poste</button>
+      <button id="pastePairButton" class="secondary" type="button" disabled>Coller le code et appairer</button>
+      <button id="reconnectButton" class="secondary" type="button">Reconnecter</button>
+      <button id="resetButton" class="danger" type="button">Oublier l’appairage</button>
+    </div>
+
+    <div class="security">
+      Connexion limitée à ce poste. Les commandes sont authentifiées et exécutées une par une.
+    </div>
+  </section>
+
+  <script src="index.js"></script>
+</body>
+</html>

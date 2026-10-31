@@ -1,0 +1,40 @@
+{
+  "name": "nexus-indesign",
+  "version": "3.2.2+codex.20260725101827",
+  "description": "Control Adobe InDesign through an authenticated local connection, with backups and visual verification.",
+  "author": {
+    "name": "Julien Piron",
+    "url": "https://github.com/pironjulien"
+  },
+  "homepage": "https://github.com/pironjulien/NexusInDesign",
+  "repository": "https://github.com/pironjulien/NexusInDesign",
+  "license": "MIT",
+  "keywords": [
+    "indesign",
+    "adobe",
+    "mcp",
+    "uxp",
+    "mise-en-page",
+    "direction-artistique"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Nexus InDesign",
+    "shortDescription": "Create with scripts, verify in InDesign.",
+    "longDescription": "A studio workflow for Adobe InDesign 2026: reproducible scripts to create and edit documents, then secure local MCP tools to inspect, preflight, render and verify the final result.",
+    "developerName": "Julien Piron",
+    "category": "Productivity",
+    "composerIcon": "./assets/composer-icon.png",
+    "logo": "./assets/logo.png",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Edit this document with scripts, then verify the final result in InDesign",
+      "Create a premium editorial layout with a reproducible workflow and verify its rendering",
+      "Finish this report, catalog or cover and audit it in InDesign"
+    ],
+    "brandColor": "#E749A0"
+  }
+}

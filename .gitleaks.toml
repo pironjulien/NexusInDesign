@@ -1,0 +1,8 @@
+title = "Nexus InDesign"
+
+[allowlist]
+description = "Jetons d'état hexadécimaux déterministes utilisés uniquement par le test de signature croisée"
+regexTarget = "secret"
+regexes = [
+  '''^(?:0123456789abcdef|fedcba9876543210)$'''
+]

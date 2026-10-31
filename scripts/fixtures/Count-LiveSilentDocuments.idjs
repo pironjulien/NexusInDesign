@@ -1,0 +1,9 @@
+const { app } = require('indesign');
+const { script } = require('uxp');
+
+let owned = 0;
+for (let index = 0; index < app.documents.length; index += 1) {
+  const doc = app.documents.item(index);
+  if (doc.extractLabel('fr.pironjulien.indesign.mcp.live-test') === 'owned') owned += 1;
+}
+script.setResult(JSON.stringify({ ok: true, owned, total: app.documents.length }));
