@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Public repository `pironjulien/NexusInDesign` (2026-10-31), started from a clean history; the earlier private
   development history is not published.
-- `Security` workflow on every push and pull request: gitleaks over the whole history and zizmor workflow audit,
+- `Security` workflow on every push and pull request: gitleaks over the whole history and zizmor workflow audit;
+  `Tests` workflow (Windows, `npm test` and `npm audit`) on every push to main and every pull request;
   actions pinned by commit SHA, Dependabot for GitHub Actions and npm with a 7-day cooldown.
 - Codex plugin icons: original Nexus InDesign pictogram, 64 and 512 px PNG for `composerIcon` and `logo`.
 - `run_layout_script` tool (`core` profile): one tracked InDesign pass that checks `revision` and `stateToken`,

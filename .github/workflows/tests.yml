@@ -1,11 +1,19 @@
-# Windows tests (heavy) on demand only; secrets and workflow audit run on every push (security.yml).
+# Windows tests and npm audit on every push to main and every pull request (free on a public repository).
 # Actions pinned by commit SHA; Dependabot (github-actions) keeps them up to date.
 name: Tests
 
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions: {}
+
+# A newer push makes the running check pointless: cancel it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
