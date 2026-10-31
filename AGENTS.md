@@ -11,6 +11,6 @@
   never in Git. Logs hold no document text, full path or secret.
 - The server starts only under an allowed agent process chain (Claude Code, Codex): name, folder and signature checked.
   Tests inject their own parent verifier; there is no bypass switch.
-- The `indesign-studio` skill (`plugin/skills`) serves Codex and Claude Code: no instruction specific to one agent.
+- The `nexus-indesign` skill (`plugin/skills`) serves Codex and Claude Code: no instruction specific to one agent.
 - After a significant change: update `CHANGELOG.md` (English, Keep a Changelog), run `test.ps1`, check the diff and
   the absence of secrets, then commit precise files with an English message.

@@ -1,5 +1,5 @@
 ---
-name: indesign-studio
+name: nexus-indesign
 description: Piloter Adobe InDesign de bout en bout sur ce poste : ouvrir, inspecter, créer, corriger et finaliser un document INDD ou IDML (magazine, brochure premium, rapport, couverture complète, catalogue, document long, template, import DOCX ou CSV, PDF d'impression) avec Nexus InDesign, en écrivant chaque modification comme un script UXP passé à run_layout_script puis en regardant l'aperçu PNG rendu. Utiliser ce skill pour toute demande qui touche un fichier InDesign ou une critique visuelle de mise en page.
 ---
 

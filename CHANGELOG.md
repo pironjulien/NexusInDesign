@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-31
+
+### Changed
+- The skill is named after its plugin (`nexus-indesign`, formerly `indesign-studio`) and both plugin manifests carry
+  the same description, as the Nexus catalog requires for every plugin.
+
 ## [4.0.0] - 2026-10-31
 
 NexusInDesign is now a native Windows engine in C#: it drives InDesign only through its COM automation (`DoScript`

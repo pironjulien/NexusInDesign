@@ -26,7 +26,7 @@ started it hidden and nothing stays open.
 
 ## How agents work with it
 
-The `indesign-studio` skill (in `plugin/skills`) guides the agent:
+The `nexus-indesign` skill (in `plugin/skills`) guides the agent:
 
 1. `silent_status`, `silent_list_documents`, then `open_document` or `create_document`: each returns `documentId`,
    `revision` and `stateToken`.
@@ -75,7 +75,7 @@ only. See [SECURITY.md](SECURITY.md) for the trust boundary and the safeguards.
 
 ```powershell
 .\test.ps1
-pwsh -File tools/package.ps1 -Version 4.0.0
+pwsh -File tools/package.ps1 -Version 4.0.1
 ```
 
 `test.ps1` runs the xUnit suite against an emulated InDesign (no InDesign needed). Every push to `main` builds and

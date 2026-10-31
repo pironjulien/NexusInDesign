@@ -1,0 +1,4 @@
+interface:
+  display_name: "InDesign Studio"
+  short_description: "Produire par scripts, contrôler dans InDesign"
+  default_prompt: "Utilise $nexus-indesign pour modifier ce document par scripts reproductibles puis contrôler le résultat final dans InDesign."

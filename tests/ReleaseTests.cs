@@ -42,7 +42,7 @@ public sealed class ReleaseTests : IDisposable
         var codex = ReadJson("plugin", ".codex-mcp.json")["mcpServers"]!["nexus-indesign"]!;
         Assert.Contains(@"%USERPROFILE%\.nexus\nexus-indesign", codex["args"]!.ToJsonString().Replace(@"\\", @"\"));
         Assert.Equal("./.codex-mcp.json", Json.Str(ReadJson("plugin", ".codex-plugin", "plugin.json"), "mcpServers"));
-        Assert.True(File.Exists(Repository.File("plugin", "skills", "indesign-studio", "SKILL.md")));
+        Assert.True(File.Exists(Repository.File("plugin", "skills", "nexus-indesign", "SKILL.md")));
         foreach (string file in Directory.EnumerateFiles(Repository.File("plugin"), "*", SearchOption.AllDirectories).Where(file => file.EndsWith(".json") || file.EndsWith(".md")))
             Assert.DoesNotMatch(@"\bnode(\.exe)?\b|\.ccx|bridge_open_pairing|INDESIGN_MCP_TOKEN_FILE", File.ReadAllText(file));
     }

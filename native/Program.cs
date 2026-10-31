@@ -7,7 +7,7 @@ namespace NexusInDesign;
 public static class Program
 {
     // Same version as NexusInDesign.csproj, the plugin manifests, server.json and the top section of CHANGELOG.md.
-    public const string Version = "4.0.0";
+    public const string Version = "4.0.1";
 
     public static int Main(string[] args)
     {
