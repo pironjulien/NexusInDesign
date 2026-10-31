@@ -37,6 +37,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   measured from 6.2 s to 1.2 s.
 - Dependencies: MCP SDK 1.32.1, ws 8.22.0, zod 4.6.7.
 
+### Fixed
+- The MCP protocol test compares the packaging folder after canonical resolution, so it passes on Windows runners
+  whose temporary folder is a short 8.3 path (`RUNNER~1`).
+
 ### Removed
 - Direct registration through `codex mcp add` (`Install-CodexMcp.ps1`, `Start-SecurePairing.ps1`,
   `Set-CodexMcpPolicy.mjs`): the Codex and Claude plugins declare the server.

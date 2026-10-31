@@ -474,7 +474,7 @@ test('MCP STDIO simulé pilote un plugin WS authentifié, signé, FIFO et sauveg
   assert.equal(replacedPackage.isError, undefined);
   assert.deepEqual(received.slice(beforePackage).map((message) => message.command), [], 'l’assemblage ne passe plus par le plugin');
   assert.equal(replacedPackage.structuredContent.executionChannel, 'silent');
-  assert.equal(silentExports.at(-1).folderPath, existingPackageFolder);
+  assert.equal(silentExports.at(-1).folderPath, await fs.realpath(existingPackageFolder));
   assert.equal(silentExports.at(-1).ignorePreflightErrors, false);
   assert.equal(await fs.readFile(path.join(replacedPackage.structuredContent.targetBackupPath, 'ancien-confidentiel.txt'), 'utf8'), 'ancienne sortie à isoler');
   assert.deepEqual(await fs.readdir(existingPackageFolder), ['package.indd']);
