@@ -1,0 +1,2340 @@
+[
+  {
+    "name": "analyze_layout",
+    "title": "Analyser la mise en page",
+    "description": "Analyse sans modification la géométrie, les ressources, les styles et les écarts à un contrat de mise en page; renvoie une empreinte stable réutilisable.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "maxItems": {
+          "default": 20000,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "contract": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "requireCompleteSnapshot": {
+              "default": true,
+              "type": "boolean"
+            },
+            "allowOversetText": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowOutdatedLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingFonts": {
+              "default": false,
+              "type": "boolean"
+            },
+            "minEffectivePpi": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "minMarginMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "allowedPageSizes": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "widthMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "heightMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "toleranceMm": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "allowRotation": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "widthMm",
+                  "heightMm",
+                  "toleranceMm",
+                  "allowRotation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "requireFacingPages": {
+              "type": "boolean"
+            },
+            "maxPages": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "maxColors": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "requiredLayers": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredParagraphStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredCharacterStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredObjectStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "allowedFonts": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "minimumStylePointSizePt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "maxOutsidePageMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "requireCompleteSnapshot",
+            "allowOversetText",
+            "allowMissingLinks",
+            "allowOutdatedLinks",
+            "allowMissingFonts"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "documentId",
+        "maxItems",
+        "contract"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Analyser la mise en page",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "workflow",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "compare_layout_snapshot",
+    "title": "Comparer une empreinte de mise en page",
+    "description": "Recalcule l’empreinte de mise en page et la compare à une empreinte de référence pour contrôler un aller-retour.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "baselineFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "maxItems": {
+          "default": 20000,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "contract": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "requireCompleteSnapshot": {
+              "default": true,
+              "type": "boolean"
+            },
+            "allowOversetText": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowOutdatedLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingFonts": {
+              "default": false,
+              "type": "boolean"
+            },
+            "minEffectivePpi": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "minMarginMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "allowedPageSizes": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "widthMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "heightMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "toleranceMm": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "allowRotation": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "widthMm",
+                  "heightMm",
+                  "toleranceMm",
+                  "allowRotation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "requireFacingPages": {
+              "type": "boolean"
+            },
+            "maxPages": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "maxColors": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "requiredLayers": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredParagraphStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredCharacterStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredObjectStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "allowedFonts": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "minimumStylePointSizePt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "maxOutsidePageMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "requireCompleteSnapshot",
+            "allowOversetText",
+            "allowMissingLinks",
+            "allowOutdatedLinks",
+            "allowMissingFonts"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "documentId",
+        "baselineFingerprint",
+        "maxItems",
+        "contract"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Comparer une empreinte de mise en page",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "workflow",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "create_document",
+    "title": "Créer un document",
+    "description": "Crée un document InDesign avec dimensions, marges et fond perdu explicites ; renvoie documentId, revision et stateToken. Avec path, l’enregistre aussitôt en INDD (sans écrasement) pour que run_layout_script puisse ensuite enregistrer avec save=true.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "expectedRevision": {
+          "type": "number",
+          "const": 0
+        },
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000
+        },
+        "pageCount": {
+          "default": 1,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "facingPages": {
+          "default": true,
+          "type": "boolean"
+        },
+        "units": {
+          "default": "mm",
+          "type": "string",
+          "enum": [
+            "mm",
+            "pt"
+          ]
+        },
+        "margins": {
+          "default": [
+            12,
+            12,
+            12,
+            12
+          ],
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bleed": {
+          "default": [
+            3,
+            3,
+            3,
+            3
+          ],
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expectedRevision",
+        "width",
+        "height",
+        "pageCount",
+        "facingPages",
+        "units",
+        "margins",
+        "bleed"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Créer un document",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "path",
+          "access": "write",
+          "extensions": [
+            ".indd"
+          ],
+          "kind": "file",
+          "mustNotExist": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "create_working_copy",
+    "title": "Créer une copie de travail",
+    "description": "Crée et ouvre silencieusement une copie INDD de travail depuis une sauvegarde vérifiée, puis prouve que le document source est resté inchangé.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "path": {
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "path",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Créer une copie de travail",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "workflow",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "path",
+          "access": "write",
+          "extensions": [
+            ".indd"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "execute_uxp_silent",
+    "title": "Exécuter UXP silencieusement",
+    "description": "Exécute du JavaScript UXP synchrone ou asynchrone sans panneau. Contrôle revision et stateToken et sauvegarde tous les documents ouverts. UXP ne garantit pas une annulation atomique; utilisez silent_restore_backup. Ce code libre peut accéder aux fichiers et au réseau.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$",
+          "description": "Jeton renvoyé par silent_inspect_document juste avant la modification."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000000
+        },
+        "input": {}
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "reason",
+        "code"
+      ]
+    },
+    "annotations": {
+      "title": "UXP silencieux",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "export_idml",
+    "title": "Exporter l’IDML",
+    "description": "Exporte le document en IDML vers un chemin autorisé, sans boîte de dialogue, puis vérifie la structure du paquet produit.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "filePath",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Exporter l’IDML",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "filePath",
+          "access": "write",
+          "extensions": [
+            ".idml"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "export_pdf",
+    "title": "Exporter le PDF",
+    "description": "Exporte un PDF vers un fichier autorisé à la révision demandée.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "presetName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "filePath",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Exporter le PDF",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "filePath",
+          "access": "write",
+          "extensions": [
+            ".pdf"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "export_png",
+    "title": "Exporter le PNG",
+    "description": "Exporte une page vers filePath, ou plusieurs pages vers folderPath, sans ambiguïté de cible.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "folderPath": {
+          "type": "string"
+        },
+        "pageId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "pageRange": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "resolution": {
+          "default": 300,
+          "type": "integer",
+          "minimum": 36,
+          "maximum": 2400
+        },
+        "transparentBackground": {
+          "default": false,
+          "type": "boolean"
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "resolution",
+        "transparentBackground",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "required": [
+                "pageId",
+                "filePath"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "folderPath"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "pageRange"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "required": [
+                "folderPath"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "pageId"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "filePath"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "annotations": {
+      "title": "Exporter le PNG",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "filePath",
+          "access": "write",
+          "extensions": [
+            ".png"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        },
+        {
+          "field": "folderPath",
+          "access": "write",
+          "kind": "directory",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "finalize_layout",
+    "title": "Finaliser la mise en page",
+    "description": "Exécute le diagnostic contractuel et le contrôle Adobe, puis exporte un PDF vérifié uniquement si aucun écart bloquant n’est détecté.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "presetName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "profileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "timeoutSeconds": {
+          "default": 60,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "maxItems": {
+          "default": 20000,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "contract": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "requireCompleteSnapshot": {
+              "default": true,
+              "type": "boolean"
+            },
+            "allowOversetText": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowOutdatedLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingFonts": {
+              "default": false,
+              "type": "boolean"
+            },
+            "minEffectivePpi": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "minMarginMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "allowedPageSizes": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "widthMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "heightMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "toleranceMm": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "allowRotation": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "widthMm",
+                  "heightMm",
+                  "toleranceMm",
+                  "allowRotation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "requireFacingPages": {
+              "type": "boolean"
+            },
+            "maxPages": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "maxColors": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "requiredLayers": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredParagraphStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredCharacterStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredObjectStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "allowedFonts": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "minimumStylePointSizePt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "maxOutsidePageMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "requireCompleteSnapshot",
+            "allowOversetText",
+            "allowMissingLinks",
+            "allowOutdatedLinks",
+            "allowMissingFonts"
+          ],
+          "additionalProperties": false
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "filePath",
+        "timeoutSeconds",
+        "overwrite",
+        "maxItems",
+        "contract",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Finaliser la mise en page",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "workflow",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "filePath",
+          "access": "write",
+          "extensions": [
+            ".pdf"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "get_document_info",
+    "title": "Inspecter le document",
+    "description": "Lit silencieusement les propriétés du document et sa révision courante.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Inspecter le document",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "get_fonts",
+    "title": "Contrôler les polices",
+    "description": "Liste silencieusement les polices utilisées et signale celles manquantes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Contrôler les polices",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "get_images",
+    "title": "Inspecter les images",
+    "description": "Liste silencieusement les images avec lien, format et résolution effective.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Inspecter les images",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "get_links",
+    "title": "Contrôler les liens",
+    "description": "Liste silencieusement les liens, statuts, chemins et résolutions effectives.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Contrôler les liens",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "get_overset_text",
+    "title": "Détecter les débordements",
+    "description": "Détecte silencieusement les blocs de texte en débordement.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Détecter les débordements",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "indesign_doctor",
+    "title": "Diagnostiquer les capacités disponibles",
+    "description": "Vérifie localement le runtime, le stockage privé, les deux canaux et l’intégrité du registre sans démarrer ni contacter InDesign. Peut inclure le détail compact de chaque outil.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "includeTools": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inclut le nom, la route, les indicateurs de sécurité et l’empreinte de schéma de chaque outil."
+        }
+      }
+    },
+    "annotations": {
+      "title": "Doctor InDesign",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "local",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "list_pages",
+    "title": "Lister les pages",
+    "description": "Liste silencieusement les pages et leurs identifiants.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Lister les pages",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "open_document",
+    "title": "Ouvrir un document",
+    "description": "Ouvre silencieusement un fichier INDD ou IDML autorisé ; renvoie documentId, revision et stateToken.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "expectedRevision": {
+          "type": "number",
+          "const": 0
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expectedRevision",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Ouvrir un document",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "path",
+          "access": "read",
+          "extensions": [
+            ".indd",
+            ".idml"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "package_document",
+    "title": "Assembler le document",
+    "description": "Crée un assemblage InDesign dans un dossier autorisé.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "folderPath": {
+          "type": "string"
+        },
+        "includeFonts": {
+          "default": true,
+          "type": "boolean"
+        },
+        "includeLinks": {
+          "default": true,
+          "type": "boolean"
+        },
+        "includeProfiles": {
+          "default": true,
+          "type": "boolean"
+        },
+        "includeHiddenLayers": {
+          "default": false,
+          "type": "boolean"
+        },
+        "ignorePreflightErrors": {
+          "default": false,
+          "type": "boolean"
+        },
+        "includeIdml": {
+          "default": true,
+          "type": "boolean"
+        },
+        "includePdf": {
+          "default": true,
+          "type": "boolean"
+        },
+        "pdfPresetName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "folderPath",
+        "includeFonts",
+        "includeLinks",
+        "includeProfiles",
+        "includeHiddenLayers",
+        "ignorePreflightErrors",
+        "includeIdml",
+        "includePdf",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Assembler le document",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "folderPath",
+          "access": "write",
+          "kind": "directory",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "preflight_document",
+    "title": "Contrôler le document",
+    "description": "Exécute silencieusement le contrôle prépresse et retourne les erreurs structurées sans modifier le document.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "profileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "timeoutSeconds": {
+          "default": 60,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        }
+      },
+      "required": [
+        "documentId",
+        "timeoutSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Contrôler le document",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "preview_layout",
+    "title": "Prévisualiser la mise en page",
+    "description": "Produit un aperçu PNG multipage vérifié et joint le diagnostic de mise en page correspondant.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "folderPath": {
+          "type": "string"
+        },
+        "pageRange": {
+          "default": "all",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "resolution": {
+          "default": 144,
+          "type": "integer",
+          "minimum": 36,
+          "maximum": 600
+        },
+        "transparentBackground": {
+          "default": false,
+          "type": "boolean"
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "maxItems": {
+          "default": 20000,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "contract": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "requireCompleteSnapshot": {
+              "default": true,
+              "type": "boolean"
+            },
+            "allowOversetText": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowOutdatedLinks": {
+              "default": false,
+              "type": "boolean"
+            },
+            "allowMissingFonts": {
+              "default": false,
+              "type": "boolean"
+            },
+            "minEffectivePpi": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "minMarginMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "allowedPageSizes": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "widthMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "heightMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000
+                  },
+                  "toleranceMm": {
+                    "default": 0.5,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "allowRotation": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "widthMm",
+                  "heightMm",
+                  "toleranceMm",
+                  "allowRotation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "requireFacingPages": {
+              "type": "boolean"
+            },
+            "maxPages": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "maxColors": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "requiredLayers": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredParagraphStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredCharacterStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "requiredObjectStyles": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "allowedFonts": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "minimumStylePointSizePt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000
+            },
+            "maxOutsidePageMm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "requireCompleteSnapshot",
+            "allowOversetText",
+            "allowMissingLinks",
+            "allowOutdatedLinks",
+            "allowMissingFonts"
+          ],
+          "additionalProperties": false
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "folderPath",
+        "pageRange",
+        "resolution",
+        "transparentBackground",
+        "overwrite",
+        "maxItems",
+        "contract",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Prévisualiser la mise en page",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "workflow",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "folderPath",
+          "access": "write",
+          "kind": "directory",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "run_layout_script",
+    "title": "Script de mise en page rapide",
+    "description": "Voie normale pour modifier un document : en un seul passage InDesign, contrôle revision et stateToken, sauvegarde tous les documents ouverts (restaurables par silent_restore_backup), exécute le code UXP (app, indesign, doc, input ; return pour renvoyer une valeur), enregistre si save=true, exporte un aperçu PNG relu, puis ferme si close=true (avec save=true). Renvoie la nouvelle revision et le nouveau stateToken : enchaînez les appels sans réinspecter. Un échec du script renvoie scriptOk=false, l’erreur, l’aperçu et backupId, sans bloquer la suite. Ce code libre peut accéder aux fichiers et au réseau.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$",
+          "description": "Jeton renvoyé par open_document, silent_inspect_document ou l’appel précédent."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000000
+        },
+        "input": {},
+        "save": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enregistre le document après un script réussi."
+        },
+        "close": {
+          "type": "boolean",
+          "default": false,
+          "description": "Ferme le document après enregistrement et aperçu ; exige save=true."
+        },
+        "previewPages": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Pages à rendre (noms InDesign, ex. \"1\" ou \"2-3\") ; première page par défaut."
+        },
+        "previewResolution": {
+          "type": "integer",
+          "minimum": 36,
+          "maximum": 300,
+          "default": 96
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "reason",
+        "code"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "close": {
+                "const": true
+              }
+            },
+            "required": [
+              "close"
+            ]
+          },
+          "then": {
+            "properties": {
+              "save": {
+                "const": true
+              }
+            },
+            "required": [
+              "save"
+            ]
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "title": "Script rapide",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "save_as",
+    "title": "Enregistrer sous",
+    "description": "Enregistre le document sous un nouveau chemin INDD autorisé (copie de sécurité de la cible existante si overwrite=true) après contrôle de revision et stateToken et sauvegarde de tous les documents ouverts.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "path": {
+          "type": "string"
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "path",
+        "overwrite",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Enregistrer sous",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": [
+        {
+          "field": "path",
+          "access": "write",
+          "extensions": [
+            ".indd"
+          ],
+          "kind": "file",
+          "mustNotExist": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "save_document",
+    "title": "Enregistrer le document",
+    "description": "Enregistre le document à son emplacement actuel après contrôle de revision et stateToken et sauvegarde de tous les documents ouverts ; renvoie le nouveau stateToken. Un document jamais enregistré exige save_as.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Enregistrer le document",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent-direct",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "search_official_dom",
+    "title": "Rechercher dans le DOM officiel Adobe",
+    "description": "Recherche hors ligne une classe ou une énumération dans l’index DOM officiel Adobe épinglé et renvoie les liens de référence exacts.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25,
+          "default": 10
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "annotations": {
+      "title": "Référence DOM officielle",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "local",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_audit_document",
+    "title": "Auditer entièrement un document sans panneau",
+    "description": "Lit en un seul appel structuré les pages, objets, liens, polices, images, débordements et styles. La réponse signale explicitement toute troncature liée au nombre d’objets ou à la limite de résultat.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000,
+          "default": 20000
+        }
+      },
+      "required": [
+        "documentId"
+      ]
+    },
+    "annotations": {
+      "title": "Audit silencieux complet",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_close_document",
+    "title": "Fermer sans enregistrer et sans panneau",
+    "description": "Ferme uniquement le document identifié avec save=false, après contrôle exact de revision et stateToken. N’enregistre pas et ne crée aucune copie du document.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "save": {
+          "const": false
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "save",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "title": "Fermer sans enregistrer",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_inspect_document",
+    "title": "Inspecter un document sans panneau",
+    "description": "Lit les propriétés essentielles, la révision et le stateToken du contenu réel. Réutilisez revision et stateToken pour toute écriture silencieuse.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "documentId"
+      ]
+    },
+    "annotations": {
+      "title": "Inspection silencieuse",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_list_documents",
+    "title": "Lister les documents sans panneau",
+    "description": "Liste les documents ouverts et leurs révisions par le canal local silencieux.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "Documents silencieux",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_operation_status",
+    "title": "Réconcilier une opération silencieuse",
+    "description": "Relit le résultat privé d’une opération dont le délai a expiré. Un résultat absent ou en attente impose toujours de réinspecter le document.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        }
+      },
+      "required": [
+        "operationId"
+      ]
+    },
+    "annotations": {
+      "title": "État d’une opération silencieuse",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_reconcile_unknown_operation",
+    "title": "Sécuriser puis acquitter une issue inconnue",
+    "description": "Après un arrêt ou une déconnexion, vérifie qu’InDesign est stable et non modal, sauvegarde tous les documents, conserve une preuve privée puis libère le verrou orphelin. Ne déduit jamais un faux succès.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "operationId",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "title": "Acquitter une issue inconnue",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_restore_backup",
+    "title": "Restaurer une copie silencieuse",
+    "description": "Restaure une copie INDD vérifiée créée par le canal silencieux. Sauvegarde d’abord tous les documents ouverts, puis remplace sans enregistrer le document ciblé. Exige revision et stateToken relus juste avant.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expectedStateToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "backupId": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{36}|[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "documentId",
+        "expectedRevision",
+        "expectedStateToken",
+        "backupId",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "title": "Restaurer une copie silencieuse",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": true,
+      "pathRules": []
+    }
+  },
+  {
+    "name": "silent_status",
+    "title": "Tester InDesign sans panneau",
+    "description": "Interroge directement InDesign 19 à 21 par COM et UXP, sans panneau, clic, réseau ni Computer Use.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "title": "État silencieux",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "route": "silent",
+      "mutatesDocument": false,
+      "pathRules": []
+    }
+  }
+]

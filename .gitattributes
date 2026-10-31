@@ -1,1 +1,4 @@
-plugin/** text eol=lf
+*.png binary
+plugin/**/*.json text eol=lf
+plugin/**/*.md text eol=lf
+plugin/**/*.yaml text eol=lf

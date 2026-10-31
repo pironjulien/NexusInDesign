@@ -1,62 +1,33 @@
-# Contribution
+# Contributing
 
-Ce dépôt public est une version maintenue et durcie du projet communautaire
-`theloniuser/indesign-uxp-server`.
+## Environment
 
-## Environnement
+- Windows 10 or 11, .NET SDK 10 (`global.json`);
+- Node.js on the PATH for the tests only (syntax check of the generated UXP scripts);
+- Adobe InDesign 2024 to 2026 for real checks (never needed by the tests).
 
-- Windows 11 ;
-- Node.js 24 ;
-- Adobe InDesign 2026 ;
-- UXP Developer Tool.
+## Rules
 
-## Avant toute modification
+1. Never commit a business document, a secret, a token or an INDD backup.
+2. Keep the safeguards: path policy, revision and `stateToken` checks, backups before any mutation, durable lease,
+   audit without content.
+3. A new InDesign capability is a UXP template in `native/uxp/` plus its tool contract in `native/tool-contracts.json`;
+   its emulation in `tests/FakeInDesign.cs` and a test go with it.
+4. A protocol fix starts with a test that really fails.
 
-1. Synchroniser `main` ; examiner le dépôt amont (voir `NOTICE.md`) sans fusion automatique.
-2. Ne jamais ajouter de document métier, de secret, de jeton ou de sauvegarde INDD.
-3. Conserver les outils hérités du profil `full` (112 `legacy-uxp` et 3 `legacy-local`) et `execute_uxp`, sauf décision explicite.
-4. Maintenir l'authentification, l'anti-rejeu, les révisions et les sauvegardes.
-5. Ajouter un test qui échoue réellement avant de corriger un défaut de protocole.
-
-## Vérifications obligatoires
-
-Jamais de `node_modules` dans le dossier OneDrive : `install.ps1` installe le runtime et les dépendances dans
-`~\.nexus\indesign-mcp-secure`, `test.ps1` lance `npm test` dans une copie miroir sous `%LOCALAPPDATA%` puis
-`gitleaks`.
+## Checks
 
 ```powershell
-.\install.ps1
 .\test.ps1
-.\scripts\Test-Installation.ps1
 git diff --check
 ```
 
-`npm audit --audit-level=high` se lance depuis `~\.nexus\indesign-mcp-secure`.
-
-Une modification du DOM UXP doit aussi être essayée dans un vrai document de
-test InDesign. Une simulation du WebSocket ne prouve pas la compatibilité du DOM.
+`test.ps1` runs the xUnit suite (`dotnet test`): the engine against an emulated InDesign, the COM host's mutex, the
+syntax of every generated script and `get.ps1` on a local package. Build and test outputs go to
+`~\.nexus\build\nexusindesign`. A change to a UXP template must also be tried in a real InDesign test document: the
+emulation does not prove DOM compatibility.
 
 ## Version
 
-La version du serveur et celle du plugin UXP se montent **ensemble** : le pont exige que l'extension annonce
-exactement la version de `package.json` (`src/version.js`). Une nouvelle version touche donc, dans le même commit :
-
-- `package.json` (et `package-lock.json`) ;
-- `plugin/manifest.json`, `plugin/index.js` (`PLUGIN_VERSION`), `plugin/commands.js` (`pluginVersion` et le
-  libellé du panneau), `plugin/index.html` ;
-- le manifeste `codex-plugin/.codex-plugin/plugin.json`, régénéré par `scripts/Sync-CodexPlugin.ps1`.
-
-Ces fichiers `plugin/` ne changent qu'avec un nouveau CCX : entre deux versions, ils restent identiques au CCX
-publié (son empreinte est vérifiée par `npm run release:verify`). Les tests lisent la version depuis
-`src/version.js`, jamais en dur.
-
-## Publication
-
-- mettre à jour `CHANGELOG.md` ;
-- examiner le diff et rechercher les secrets ;
-- utiliser un message de commit en anglais ;
-- pousser uniquement vers `origin` (`pironjulien/NexusInDesign`, public) : aucune donnée personnelle ni
-  professionnelle, garde gitleaks au pre-push ;
-- vérifier le CCX officiel avec `npm run release:verify` ;
-- publier l’asset seulement depuis une branche propre et déjà poussée avec
-  `npm run release:publish`.
+One version everywhere: `native/Program.cs`, `native/NexusInDesign.csproj`, both plugin manifests, `server.json` and the
+top section of `CHANGELOG.md` (Keep a Changelog). The `Release` workflow checks them, builds, attests and promotes.

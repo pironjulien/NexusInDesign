@@ -1,27 +1,19 @@
-# Composants tiers embarqués
+# Third-party components
 
-## js-sha256 0.11.1
+## Adobe InDesign UXP documentation
 
-- Projet : <https://github.com/emn178/js-sha256>
-- Auteur : Chen, Yi-Cyuan
-- Licence : MIT
-- Fichier source embarqué : `plugin/vendor/js-sha256.js`
-- Empreinte SHA-256 : `2db6c8e554fbee14672368a0d7551a8ddd841ee96c91526eb7987a0179cfc717`
-- Texte de licence : `plugin/vendor/LICENSE.js-sha256.txt`
+- Project: <https://github.com/AdobeDocs/uxp-indesign>
+- Publisher: Adobe
+- Pinned revision: `ba9d36134a4c2ee72dc03e16bbac3144e1263327`
+- License: Apache-2.0 (`native/reference/LICENSE.AdobeDocs.txt`)
+- Embedded file: `native/reference/indesign-dom-paths.xml`
+- SHA-256: `c1b0d48666943c69847556a26e52b13f3d2a43b7b0efa410802e2c71c0a32331`
 
-Cette copie est utilisée uniquement pour HMAC-SHA256 lorsque l’environnement
-UXP ne fournit pas `SubtleCrypto`. Elle ne réalise aucun accès réseau.
+The official sitemap is kept unchanged and only serves `search_official_dom` as a local, read-only index of Adobe's
+published DOM documentation. No user document and no network request are involved.
 
-## Adobe InDesign UXP Documentation
+## JsonSchema.Net
 
-- Projet officiel : <https://github.com/AdobeDocs/uxp-indesign>
-- Éditeur : Adobe
-- Révision épinglée : `ba9d36134a4c2ee72dc03e16bbac3144e1263327`
-- Licence : Apache-2.0
-- Fichier officiel embarqué : `src/reference/indesign-dom-paths.xml`
-- Empreinte SHA-256 : `c1b0d48666943c69847556a26e52b13f3d2a43b7b0efa410802e2c71c0a32331`
-- Texte de licence : `src/reference/LICENSE.AdobeDocs.txt`
-
-Le sitemap officiel est conservé sans modification et sert uniquement d’index
-local en lecture seule vers la documentation DOM publiée par Adobe. Aucun
-contenu de document utilisateur et aucune requête réseau ne sont impliqués.
+- Project: <https://github.com/json-everything/json-everything>
+- License: MIT
+- Use: checks the tools' arguments against their JSON Schema 2020-12 contracts (NuGet package, compiled into the engine).

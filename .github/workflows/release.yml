@@ -1,0 +1,168 @@
+# Release, in two channels, with the shared Nexus release workflows of NexusSystem.
+# - Development: every push to main checks one version everywhere (native/Program.cs, the csproj, the plugin, its
+#   manifests, server.json and CHANGELOG.md), runs test.ps1 and builds the release files with tools/package.ps1:
+#   NexusInDesign-win-x64.zip and NexusInDesign-win-arm64.zip (self-contained NexusInDesign.exe), the MCP bundles
+#   nexus-indesign-X.Y.Z-win-x64.mcpb and nexus-indesign-X.Y.Z-win-arm64.mcpb, get.ps1 and SHA256SUMS.txt.
+#   product-dev-release attests them (Sigstore, keyless: `gh attestation verify <file> --repo pironjulien/NexusInDesign`)
+#   and publishes the pre-release vX.Y.Z-dev.N (NexusSystem's development channel).
+# - Stable: right after that build when its version is not released yet, or "Run workflow" (promote: a vX.Y.Z-dev.N,
+#   or empty for the newest), product-promote runs: the SAME files
+#   become the release "NexusInDesign X.Y.Z" (vX.Y.Z) with the CHANGELOG section. Then the `registry` job below sends
+#   server.json, with both bundles' URLs and SHA-256, to the official MCP registry (GitHub OIDC, namespace
+#   io.github.pironjulien; no token stored): the shared registry job lists a single .mcpb, this product lists two.
+#   registry: only re-send a stable release's server.json. get.ps1 installs from releases/latest.
+# Actions and shared workflows pinned by commit SHA; Dependabot (github-actions) keeps them up to date.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: Development build to publish as stable (vX.Y.Z-dev.N; empty = the newest)
+        required: false
+        default: ''
+      registry:
+        description: Only send this stable release's server.json (vX.Y.Z) to the MCP registry again
+        required: false
+        default: ''
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'push' && github.repository == 'pironjulien/NexusInDesign'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 24
+      - name: One version everywhere
+        id: version
+        shell: pwsh
+        run: |
+          $version = [regex]::Match((Get-Content native/Program.cs -Raw), 'public const string Version = "([^"]+)"').Groups[1].Value
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "native/Program.cs: no X.Y.Z version ($version)." }
+          $server = Get-Content server.json -Raw | ConvertFrom-Json
+          $found = [ordered]@{
+            'native/NexusInDesign.csproj' = ([xml](Get-Content native/NexusInDesign.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+            'plugin/.claude-plugin/plugin.json' = (Get-Content plugin/.claude-plugin/plugin.json -Raw | ConvertFrom-Json).version
+            'plugin/.codex-plugin/plugin.json' = (Get-Content plugin/.codex-plugin/plugin.json -Raw | ConvertFrom-Json).version
+            'CHANGELOG.md' = [regex]::Match((Get-Content CHANGELOG.md -Raw), '(?m)^## \[(\d+\.\d+\.\d+)\]').Groups[1].Value
+            'server.json' = $server.version
+          }
+          foreach ($arch in 'x64', 'arm64') {
+            $package = @($server.packages | Where-Object { $_.identifier -like "*-win-$arch.mcpb" })
+            $expected = "https://github.com/pironjulien/NexusInDesign/releases/download/v$version/nexus-indesign-$version-win-$arch.mcpb"
+            $found["server.json $arch package"] = if ($package.Count -eq 1 -and $package[0].identifier -eq $expected) { $version } else { "$($package.identifier)" }
+          }
+          $wrong = @($found.GetEnumerator() | Where-Object { $_.Value -ne $version } | ForEach-Object { "$($_.Key)=$($_.Value)" })
+          if ($wrong) { throw "Version $version expected: $($wrong -join ', ')" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Tests (test.ps1)
+        shell: pwsh
+        run: ./test.ps1
+      - name: Packages
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Zips, MCP bundles, get.ps1 and SHA256SUMS.txt (every other dist file, nothing else).
+          ./tools/package.ps1 -Version $env:VERSION -Out dist
+          Get-Content dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 3
+
+  dev:
+    needs: build
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    uses: pironjulien/NexusSystem/.github/workflows/product-dev-release.yml@9cf03f2ac93e207307351b393130ff1cfe2aef7b  # v1.6.40
+    with:
+      product: NexusInDesign
+      version: ${{ needs.build.outputs.version }}
+
+  promote:
+    # Right after the push that built a new version (same files), or by hand ("Run workflow").
+    needs: dev
+    if: always() && (needs.dev.result == 'success' || github.event_name == 'workflow_dispatch') && github.repository == 'pironjulien/NexusInDesign'
+    permissions:
+      contents: write
+      id-token: write
+    uses: pironjulien/NexusSystem/.github/workflows/product-promote.yml@9cf03f2ac93e207307351b393130ff1cfe2aef7b  # v1.6.40
+    with:
+      product: NexusInDesign
+      promote: ${{ inputs.promote || needs.dev.outputs.tag }}
+      registry-only: ${{ inputs.registry }}
+      # No mcp-package: the registry lists both bundles (x64 and Arm64), sent by the `registry` job below.
+
+  registry:
+    # server.json to the official MCP registry: both stable bundles, their URLs and their SHA-256 checked against the
+    # release's attested SHA256SUMS.txt. mcp-publisher pinned by version and SHA-256; no token stored, no manual login.
+    needs: promote
+    if: >-
+      always() && github.repository == 'pironjulien/NexusInDesign' &&
+      (inputs.registry != '' || (needs.promote.result == 'success' && needs.promote.outputs.tag != ''))
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      PUBLISHER_VERSION: v1.8.1
+      PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: server.json for this release
+        env:
+          TAG: ${{ inputs.registry || needs.promote.outputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a release tag: $TAG"; exit 1; }
+          version="${TAG#v}"
+          base="https://github.com/${REPOSITORY}/releases/download/${TAG}"
+          sums=$(curl -fsSL --retry 5 "$base/SHA256SUMS.txt" | tr -d '\r')
+          jq --arg v "$version" '.version = $v' server.json > server.release.json
+          for arch in x64 arm64; do
+            package="nexus-indesign-$version-win-$arch.mcpb"
+            curl -fsSL --retry 5 -o "$package" "$base/$package"
+            sha=$(sha256sum "$package" | cut -d' ' -f1)
+            grep -qx "${sha}  ${package}" <<<"$sums" || { echo "$package differs from the attested SHA256SUMS.txt"; exit 1; }
+            jq --arg u "$base/$package" --arg s "$sha" --arg end "-win-$arch.mcpb" \
+              '(.packages[] | select(.identifier | endswith($end))) |= (.identifier = $u | .fileSha256 = $s)' \
+              server.release.json > server.tmp
+            mv server.tmp server.release.json
+          done
+          cat server.release.json
+      - name: Install mcp-publisher (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum --strict -c
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish server.release.json

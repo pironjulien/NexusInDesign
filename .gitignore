@@ -1,45 +1,20 @@
-# Dépendances et rapports
-node_modules/
-coverage/
-.nyc_output/
-.npm/
-*.tgz
-
-# Données d'exécution locales
-work/
+# Build outputs (normally outside the repository: ~\.nexus\build\nexusindesign, see Directory.Build.props)
+bin/
+obj/
 dist/
-logs/
-*.log
-*.pid
-*.tmp
-*.temp
-.cache/
+TestResults/
+*.user
+.vs/
 
-# Documents et verrous InDesign
+# InDesign documents and locks
 *.indd
 *.indt
 *.indb
 *.idlk
-*.jsx~
-*.jsx.bak
 
-# Paquets générés
-*.ccx
-
-# Secrets et configurations locales
+# Local state and secrets: never in the repository (state folder ~\.nexus\nexus-indesign)
+settings.json
 .env
 *.token
-*bridge-secret*
-*pairing-secret*
-.cursor-tools.env
-.cursor-tools.config.json
-codex-plugin/.mcp.json
-
-# Éditeurs et système
-.vscode/
-.idea/
-*.sublime-*
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+*.log
+*.tmp

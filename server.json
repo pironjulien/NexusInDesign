@@ -1,0 +1,79 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.pironjulien/nexus-indesign",
+  "title": "NexusInDesign",
+  "description": "Adobe InDesign through COM only: scripts, previews, preflight, verified exports, backups.",
+  "version": "4.0.0",
+  "websiteUrl": "https://github.com/pironjulien/NexusInDesign",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/pironjulien/NexusInDesign/main/plugin/assets/logo.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "256x256"
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/pironjulien/NexusInDesign",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/pironjulien/NexusInDesign/releases/download/v4.0.0/nexus-indesign-4.0.0-win-x64.mcpb",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "NEXUS_INDESIGN_HOME",
+          "description": "Install and state folder (settings, backups, audit) instead of ~/.nexus/nexus-indesign",
+          "isRequired": false,
+          "format": "filepath"
+        },
+        {
+          "name": "INDESIGN_MCP_READ_ROOTS",
+          "description": "Folders documents may be opened from (;-separated, default: the user profile)",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "INDESIGN_MCP_WRITE_ROOTS",
+          "description": "Folders exports and saves may be written to (;-separated, default: the user profile)",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    },
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/pironjulien/NexusInDesign/releases/download/v4.0.0/nexus-indesign-4.0.0-win-arm64.mcpb",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "NEXUS_INDESIGN_HOME",
+          "description": "Install and state folder (settings, backups, audit) instead of ~/.nexus/nexus-indesign",
+          "isRequired": false,
+          "format": "filepath"
+        },
+        {
+          "name": "INDESIGN_MCP_READ_ROOTS",
+          "description": "Folders documents may be opened from (;-separated, default: the user profile)",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "INDESIGN_MCP_WRITE_ROOTS",
+          "description": "Folders exports and saves may be written to (;-separated, default: the user profile)",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

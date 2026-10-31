@@ -5,50 +5,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-31
+
+NexusInDesign is now a native Windows engine in C#: it drives InDesign only through its COM automation (`DoScript`
+with UXP scripts under `NEVER_INTERACT`), without Node.js, without the Adobe UXP plugin (`.ccx`) and without any network
+listener, so NexusSystem can install it like the other Nexus products.
+
 ### Added
-- Public repository `pironjulien/NexusInDesign` (2026-10-31), started from a clean history; the earlier private
-  development history is not published.
-- `Security` workflow on every push and pull request: gitleaks over the whole history and zizmor workflow audit;
-  `Tests` workflow (Windows, `npm test` and `npm audit`) on every push to main and every pull request;
-  actions pinned by commit SHA, Dependabot for GitHub Actions and npm with a 7-day cooldown.
-- Codex plugin icons: original Nexus InDesign pictogram, 64 and 512 px PNG for `composerIcon` and `logo`.
-- `run_layout_script` tool (`core` profile): one tracked InDesign pass that checks `revision` and `stateToken`,
-  backs up every open document, runs the UXP script, saves, renders a verified PNG preview and returns the new
-  revision and token.
-- Tool profiles (`INDESIGN_MCP_TOOL_PROFILE`): `core` by default (41 tools), `full` (172 tools) restores the
-  historical `legacy-uxp` commands. A hidden tool is neither listed nor callable; `indesign_doctor` shows the profile.
-- Claude Code as an allowed caller, next to Codex (parent executable name, folder and signature checked).
-- `create_document` and `package_document` go through the silent channel (COM + UXP, `NEVER_INTERACT`) when the UXP
-  panel is not connected; an InDesign packaging refusal is explained (RGB images, links, missing fonts, overset).
-- Shared local broker: the first server that binds `127.0.0.1:33171` serves the other agent tasks; peers
-  authenticate mutually and the owner checks each client's signed agent process chain.
-- `scripts\Install-Workstation.ps1` (multi-PC setup from the verified release) and `install.ps1` (runtime in
-  `~\.nexus\indesign-mcp-secure`, outside OneDrive, with locked dependencies; `-CheckOnly` to verify).
-- `test.ps1` at the root: `npm test` in a mirror copy outside OneDrive, then gitleaks, without InDesign.
+- Native engine `NexusInDesign.exe` (.NET 10, self-contained single file, x64 and Arm64): MCP over stdio, the 32-tool
+  `core` profile, JSON Schema 2020-12 argument checks, the same path policy, backups, revision and `stateToken` checks,
+  audit journal and recovery as before. COM runs in-process on one STA thread that owns the shared mutex
+  `Local\NexusInDesignAutomation`: no PowerShell per call.
+- Silent `save_document`, `save_as`, `export_idml` and `create_working_copy` (they needed the UXP panel before):
+  backups of every open document first, the other documents checked unchanged, the saved INDD or exported IDML
+  structurally verified.
+- `get.ps1`: installs or updates `%USERPROFILE%\.nexus\nexus-indesign\NexusInDesign.exe` from the latest release after
+  checking its SHA-256 (attested build); `-Remove` removes it and keeps backups and the audit journal.
+- `plugin/`: the Claude Code and Codex plugins (manifests, MCP declarations, the `indesign-studio` skill), pinned in the
+  Nexus catalog; MCP bundles (`.mcpb`, x64 and Arm64) for Claude Desktop, listed in the official MCP registry.
+- Optional `%USERPROFILE%\.nexus\nexus-indesign\settings.json` (`readRoots`, `writeRoots`, `deniedRoots`), next to the
+  `INDESIGN_MCP_*` environment variables.
+- `Release` workflow through NexusSystem's shared `product-dev-release` and `product-promote` (Sigstore build
+  provenance, the same files promoted to stable); `Tests` runs `test.ps1` (xUnit: the engine against an emulated
+  InDesign, the COM host's mutex, the syntax of every generated UXP script, `get.ps1`).
+- Public repository `pironjulien/NexusInDesign` (2026-10-31) started from a clean history; `Security` workflow
+  (gitleaks, zizmor) on every push; Dependabot for GitHub Actions and NuGet with a 7-day cooldown.
+- `run_layout_script`: one tracked InDesign pass that checks `revision` and `stateToken`, backs up every open
+  document, runs the UXP script, saves, renders a verified PNG preview and returns the new revision and token.
+- Claude Code as an allowed caller next to Codex (executable name, folder and Authenticode signer checked).
 
 ### Changed
-- The Windows named mutex shared by the plugin and silent channels is now `Local\NexusInDesignAutomation`
-  (test mutexes: `Local\NexusInDesignAutomation.Test.<uuid>`). Reinstall the runtime with `install.ps1` so the
-  server and the scripts use the same name.
-- The release manifest `release\v3.2.2.json` points at `pironjulien/NexusInDesign`.
-- The version is read from `package.json` instead of being hard-coded.
-- The private vault only keeps the pairing token; backups, audit and execution state live in
-  `~\.nexus\indesign-mcp-secure\private`, outside OneDrive.
-- `export_pdf`, `export_png`, `preview_layout` and `finalize_layout` prefer the silent channel; COM launcher
-  measured from 6.2 s to 1.2 s.
-- Dependencies: MCP SDK 1.32.2 (2026-10-31), ws 8.22.0, zod 4.6.7.
-
-### Fixed
-- The MCP protocol test compares the packaging folder after canonical resolution, so it passes on Windows runners
-  whose temporary folder is a short 8.3 path (`RUNNER~1`).
+- Private storage moves to `%USERPROFILE%\.nexus\nexus-indesign\private` (backups, audit, runtime), still refused
+  under OneDrive; default read and write root: the user profile; `.nexus`, `.ssh`, `.gnupg` and AppData are denied.
+- An unknown outcome left by this server can be reconciled once its InDesign call has ended (before, only one left by
+  a crashed server); an InDesign started by a call that ends hidden with no document is closed again.
+- Default command timeout 120 s (`INDESIGN_MCP_COMMAND_TIMEOUT_MS`, up to 600 s).
 
 ### Removed
-- Direct registration through `codex mcp add` (`Install-CodexMcp.ps1`, `Start-SecurePairing.ps1`,
-  `Set-CodexMcpPolicy.mjs`): the Codex and Claude plugins declare the server.
+- The Node.js server, its npm dependencies and `install.ps1` (runtime in `~\.nexus\indesign-mcp-secure`).
+- The Adobe UXP plugin (`.ccx`), its WebSocket listener on `127.0.0.1:33171`, pairing, HMAC token and shared broker,
+  with the tools that only it served: `bridge_status`, `bridge_open_pairing_window`, `bridge_arm_pairing_clipboard`,
+  `bridge_operation_status`, `execute_uxp` (use `execute_uxp_silent`), `restore_safety_backup` (use
+  `silent_restore_backup`), `close_document` (use `silent_close_document` or `run_layout_script` with `close`),
+  `list_documents` (use `silent_list_documents`) and `ping`.
+- The `full` profile (131 historical object-by-object commands, all served by the UXP plugin): write them as a UXP
+  script passed to `run_layout_script`.
+- The PowerShell COM launchers and mutex helper (`scripts\`).
 
-### Known issues
-- `silent_close_document` on a packaged copy can stop the server.
-- The first `export_pdf` after a heavy build can see the document state change during the export.
+### Security
+- No network listener at all; nothing but the agent's stdio reaches the engine.
+- The parent chain is read natively (process snapshot, image paths, start times against PID reuse) and signatures are
+  checked with WinVerifyTrust.
 
 ## [3.2.2] - 2026-07-17
 

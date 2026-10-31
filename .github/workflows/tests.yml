@@ -1,4 +1,4 @@
-# Windows tests and npm audit on every push to main and every pull request (free on a public repository).
+# Windows tests (test.ps1: xUnit) on every push to main and every pull request (free on a public repository).
 # Actions pinned by commit SHA; Dependabot (github-actions) keeps them up to date.
 name: Tests
 
@@ -18,16 +18,20 @@ concurrency:
 jobs:
   tests:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      # Node.js only checks the syntax of the generated UXP scripts (tests); the product never needs it.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: 24
-      - run: npm ci
-      - run: npm test
-      - run: npm audit --audit-level=high
+      - name: test.ps1 (engine against an emulated InDesign, COM host mutex, UXP script syntax, get.ps1)
+        shell: pwsh
+        run: ./test.ps1

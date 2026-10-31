@@ -1,0 +1,24 @@
+{
+  "name": "nexus-indesign",
+  "displayName": "Nexus InDesign",
+  "version": "4.0.0",
+  "description": "Adobe InDesign for Claude through its COM automation only (no panel, no UXP plugin, no network): open, script, preview, preflight and export, every change backed up and checked. Starts the native NexusInDesign engine installed by NexusSystem (or NexusInDesign's get.ps1).",
+  "author": {
+    "name": "Julien Piron",
+    "url": "https://github.com/pironjulien"
+  },
+  "homepage": "https://github.com/pironjulien/NexusInDesign",
+  "repository": "https://github.com/pironjulien/NexusInDesign",
+  "license": "MIT",
+  "keywords": [
+    "indesign",
+    "adobe",
+    "layout",
+    "desktop-publishing",
+    "mcp"
+  ],
+  "icon": "./assets/logo.png",
+  "documentationUrl": "https://github.com/pironjulien/NexusInDesign#readme",
+  "privacyPolicyUrl": "https://github.com/pironjulien/NexusInDesign#privacy",
+  "supportUrl": "https://github.com/pironjulien/NexusInDesign/issues"
+}

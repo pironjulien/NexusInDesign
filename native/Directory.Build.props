@@ -1,0 +1,9 @@
+<Project>
+  <!-- Every build output of the engine goes to ~\.nexus\build\nexusindesign\native: never into OneDrive or AppData. -->
+  <PropertyGroup>
+    <NexusBuild Condition="'$(NexusBuild)' == ''">$(USERPROFILE)\.nexus\build\nexusindesign\</NexusBuild>
+    <BaseOutputPath>$(NexusBuild)native\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(NexusBuild)native\obj\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+</Project>

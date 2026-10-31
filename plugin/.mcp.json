@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "nexus-indesign": {
+      "type": "stdio",
+      "command": "${USERPROFILE}\\.nexus\\nexus-indesign\\NexusInDesign.exe",
+      "args": ["--mcp"]
+    }
+  }
+}

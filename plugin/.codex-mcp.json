@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "nexus-indesign": {
+      "command": "cmd.exe",
+      "args": ["/d", "/c", "cd", "/d", "%USERPROFILE%\\.nexus\\nexus-indesign", "&&", ".\\NexusInDesign.exe", "--mcp"],
+      "startup_timeout_sec": 60,
+      "tool_timeout_sec": 900
+    }
+  }
+}
