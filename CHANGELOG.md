@@ -35,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `~\.nexus\indesign-mcp-secure\private`, outside OneDrive.
 - `export_pdf`, `export_png`, `preview_layout` and `finalize_layout` prefer the silent channel; COM launcher
   measured from 6.2 s to 1.2 s.
-- Dependencies: MCP SDK 1.32.1, ws 8.22.0, zod 4.6.7.
+- Dependencies: MCP SDK 1.32.2 (2026-10-31), ws 8.22.0, zod 4.6.7.
 
 ### Fixed
 - The MCP protocol test compares the packaging folder after canonical resolution, so it passes on Windows runners
