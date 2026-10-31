@@ -21,6 +21,8 @@
   for (let index = 0; index < app.documents.length; index += 1) { const current = app.documents.item(index); const raw = Number.parseInt(current.extractLabel("fr.pironjulien.indesign.mcp.revision") || "0", 10) || 0; documentsBefore.push({ doc: current, documentId: Number(current.id), revision: raw }); }
   const userInput = @@input@@;
   const userCode = @@code@@;
+  const undoName = @@undoName@@;
+  let grouped = false;
   const previousInteraction = app.scriptPreferences.userInteractionLevel;
   const previousRedraw = app.scriptPreferences.enableRedraw;
   let mutationStarted = false;
@@ -29,7 +31,14 @@
     if (revisionsWritten) return [];
     revisionsWritten = true;
     const revisions = [];
-    for (const entry of documentsBefore) { try { if (entry.doc && entry.doc.isValid !== false) { const next = entry.revision + 1; entry.doc.insertLabel("fr.pironjulien.indesign.mcp.revision", String(next)); revisions.push({ documentId: entry.documentId, revision: next }); } } catch (_) {} }
+    const write = () => {
+      revisions.length = 0;
+      for (const entry of documentsBefore) { try { if (entry.doc && entry.doc.isValid !== false) { const next = entry.revision + 1; entry.doc.insertLabel("fr.pironjulien.indesign.mcp.revision", String(next)); revisions.push({ documentId: entry.documentId, revision: next }); } } catch (_) {} }
+    };
+    // AUTO_UNDO : les étiquettes de révision rejoignent l'étape d'annulation du script.
+    let labelled = false;
+    if (grouped) { try { app.doScript(() => { write(); labelled = true; }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.AUTO_UNDO, undoName); } catch (_) {} }
+    if (!labelled) write();
     return revisions;
   };
   let outcome;
@@ -38,10 +47,16 @@
     app.scriptPreferences.enableRedraw = false;
     mutationStarted = true;
     const executeUserCode = new Function("app", "indesign", "doc", "input", '"use strict"; return (async function () {\n' + userCode + '\n}).call(null);');
-    const value = await executeUserCode(app, indesign, targetDocument, userInput);
+    // Une seule étape d'annulation nommée pour la partie synchrone du script (avant son premier await).
+    let pending = null;
+    try { app.doScript(() => { pending = executeUserCode(app, indesign, targetDocument, userInput); }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.ENTIRE_SCRIPT, undoName); grouped = pending !== null; } catch (_) {}
+    if (pending === null) pending = executeUserCode(app, indesign, targetDocument, userInput);
+    const value = await pending;
     const revisions = advanceRevisions();
     const currentTarget = revisions.find((entry) => entry.documentId === wanted);
-    outcome = { ok: true, result: value === undefined ? null : value, documentId: wanted, revision: currentTarget ? currentTarget.revision : null, revisions, stateToken: targetDocument && targetDocument.isValid !== false ? documentStateToken(targetDocument) : null, operationId: __operationId };
+    let undo = null;
+    try { if (targetDocument && targetDocument.isValid !== false) undo = { name: undoName, singleStep: grouped && String(targetDocument.undoName) === undoName }; } catch (_) {}
+    outcome = { ok: true, result: value === undefined ? null : value, documentId: wanted, revision: currentTarget ? currentTarget.revision : null, revisions, undo, stateToken: targetDocument && targetDocument.isValid !== false ? documentStateToken(targetDocument) : null, operationId: __operationId };
   } catch (error) {
     if (mutationStarted) advanceRevisions();
     error.requiresInspection = mutationStarted;

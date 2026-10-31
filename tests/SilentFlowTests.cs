@@ -32,8 +32,15 @@ public sealed class SilentFlowTests
         var script = State(opened);
         script["code"] = "doc.pages.item(0).textFrames.add();";
         script["save"] = true;
-        var layout = await sandbox.Ok("run_layout_script", script);
+        var response = await sandbox.Call("run_layout_script", script);
+        var layout = (JsonObject)response["structuredContent"]!;
         Assert.True(Json.IsTrue(layout, "scriptOk"));
+        // The preview comes back as a capped JPEG thumbnail next to its PNG path.
+        var thumbnail = (JsonObject)response["content"]![1]!;
+        Assert.Equal("image", Json.Str(thumbnail, "type"));
+        Assert.Equal("image/jpeg", Json.Str(thumbnail, "mimeType"));
+        Assert.True(Convert.FromBase64String(Json.Str(thumbnail, "data")!).Length > 0);
+        Assert.Equal(1, Json.Long(layout["thumbnails"], "returned"));
         Assert.Equal(1, Json.Long(layout, "revision"));
         Assert.True(Json.IsTrue(layout, "saved"));
         Assert.Single((JsonArray)layout["previewPaths"]!);
@@ -65,8 +72,11 @@ public sealed class SilentFlowTests
         var stale = State(opened);
         stale["expectedStateToken"] = "0123456789abcdef";
         stale["code"] = "return 1;";
-        string error = await sandbox.Fails("run_layout_script", stale);
-        Assert.Contains("STATE_CONFLICT", error);
+        var refused = (JsonObject)(await sandbox.Call("run_layout_script", stale))["structuredContent"]!;
+        Assert.Equal("STATE_CONFLICT", Json.Str(refused, "code"));
+        Assert.Equal("not_done", Json.Str(refused, "outcome"));
+        Assert.True(Json.IsTrue(refused, "retry_safe"));
+        Assert.Equal("silent_inspect_document", Json.Str(refused, "nextTool"));
         Assert.False(File.Exists(sandbox.App.Bridge!.LeasePath));
 
         var export = State(opened);
@@ -87,6 +97,8 @@ public sealed class SilentFlowTests
         Assert.False(Json.IsTrue(result, "scriptOk"));
         Assert.NotNull(Json.Str(result, "backupId"));
         Assert.Contains("silent_restore_backup", Json.Str(result, "nextStep"));
+        Assert.Equal("not_done", Json.Str(result, "outcome"));
+        Assert.True(Json.IsTrue(result, "retry_safe"));
         Assert.False(File.Exists(sandbox.App.Bridge!.LeasePath));
     }
 
@@ -102,6 +114,9 @@ public sealed class SilentFlowTests
         Assert.True(Json.IsTrue(response, "isError"));
         var recovery = (JsonObject)response["structuredContent"]!;
         Assert.True(Json.IsTrue(recovery, "requiresInspection"));
+        Assert.Equal("unknown", Json.Str(recovery, "outcome"));
+        Assert.False(Json.IsTrue(recovery, "retry_safe"));
+        Assert.Equal("silent_operation_status", Json.Str(recovery, "nextTool"));
         string operationId = Json.Str(recovery, "operationId")!;
         Assert.True(File.Exists(sandbox.App.Bridge!.LeasePath));
 

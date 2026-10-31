@@ -17,3 +17,11 @@ published DOM documentation. No user document and no network request are involve
 - Project: <https://github.com/json-everything/json-everything>
 - License: MIT
 - Use: checks the tools' arguments against their JSON Schema 2020-12 contracts (NuGet package, compiled into the engine).
+
+## System.Drawing.Common
+
+- Project: <https://github.com/dotnet/winforms>
+- Publisher: Microsoft (.NET Foundation)
+- License: MIT
+- Use: downscales the verified preview PNGs into the capped JPEG thumbnails returned with `run_layout_script` and
+  `preview_layout` (NuGet package, Windows GDI+, compiled into the engine).

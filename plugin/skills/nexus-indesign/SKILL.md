@@ -28,10 +28,10 @@ même pas régler des colonnes. Chaque appel InDesign coûte plusieurs secondes 
 1. **Cadrer.** Livrable, public, format, sortie (impression, écran), contenus et assets réels disponibles. Si le projet possède déjà un générateur ou des scripts InDesign versionnés, les lire : ils restent la source de vérité (voir [workflows.md](references/workflows.md)).
 2. **Se connecter.** `silent_status`. En cas d'échec seulement : `indesign_doctor`.
 3. **Cibler.** `silent_list_documents`, puis `open_document` si le fichier n'est pas ouvert, ou `create_document` pour un document neuf (avec `path` pour l'enregistrer aussitôt, sinon `save=true` échouera faute de chemin) ; les deux renvoient `documentId`, `revision` et `stateToken`. Plusieurs documents ouverts : toujours viser par `documentId`, jamais « le document actif ».
-4. **Comprendre** (si le document existe déjà). `silent_audit_document` une fois : pages, objets, styles, liens, polices, images, débordements. `analyze_layout` si une empreinte de référence est utile.
+4. **Comprendre** (si le document existe déjà). `silent_audit_document` une fois : pages, objets, styles, liens, polices, images, débordements. `analyze_layout` si une empreinte de référence ou un audit typographique est utile (avertissements `STYLE_OVERRIDE`, `UNSTYLED_TEXT`, `INCONSISTENT_POINT_SIZE`, `INCONSISTENT_LEADING`, `LEADING_TIGHTER_THAN_SIZE`, avec les `storyIds` à corriger).
 5. **Écrire.** `run_layout_script` avec `documentId`, `expectedRevision`, `expectedStateToken`, `reason` et `code`. En un seul passage, il contrôle l'état, sauvegarde tous les documents ouverts, exécute, enregistre si `save: true`, puis rend l'aperçu. Il renvoie la nouvelle `revision` et le nouveau `stateToken` : les réutiliser tels quels pour l'appel suivant, sans réinspecter.
-6. **Regarder.** Ouvrir chaque fichier de `previewPaths` et le juger réellement (lire l'image, pas seulement vérifier qu'elle existe). Choisir les pages avec `previewPages` (`"1"`, `"2-3"`) : au minimum une page dense, une page légère, la couverture ou la double page s'il y en a. Critiquer selon [art-direction.md](references/art-direction.md).
-7. **Corriger.** Un nouveau script relié à chaque défaut vu. Si `scriptOk` vaut `false` : lire `scriptError`, regarder l'aperçu (le document peut être partiellement modifié), corriger et relancer, ou revenir en arrière avec `silent_restore_backup` et le `backupId` renvoyé.
+6. **Regarder.** La réponse joint une vignette de chaque page rendue (1024 px au plus, 4 pages au plus) : la juger réellement ; ouvrir le PNG de `previewPaths` pour le détail fin. Pour localiser un défaut, `preview_layout` avec `annotate: true` rend une copie cachée annotée (identifiant `#id` de chaque bloc, marges, gouttières, excès en rouge) sans toucher au document. Choisir les pages avec `previewPages` (`"1"`, `"2-3"`) : au minimum une page dense, une page légère, la couverture ou la double page s'il y en a. Critiquer selon [art-direction.md](references/art-direction.md).
+7. **Corriger.** Un nouveau script relié à chaque défaut vu. Si `scriptOk` vaut `false` : lire `scriptError` et `outcome` (`not_done` : rien n'a changé, corriger et relancer ; `partial` : le document est partiellement modifié), regarder l'aperçu, puis corriger ou revenir en arrière avec `silent_restore_backup` et le `backupId` renvoyé. Les modifications d'un script faites avant son premier `await` forment une seule étape d'annulation InDesign nommée « Nexus : <reason> » (`undo.singleStep`).
 8. **Valider.** `preflight_document`, `get_overset_text`, `get_links`, `get_fonts` selon le livrable. `finalize_layout` ou `export_pdf` pour la sortie, puis ouvrir l'artefact et contrôler type, pages, dimensions et contenu.
 9. **Fermer et rendre compte.** `silent_close_document` pour les documents ouverts par la tâche. Donner le livrable, le document et la révision finaux, les pages regardées, le résultat du préflight et les limites restantes ; distinguer terminé, non terminé et non vérifié.
 
@@ -51,12 +51,13 @@ Le code reçoit `app`, `indesign` (énumérations), `doc` (le document visé) et
 ## Parcours et références
 
 - [workflows.md](references/workflows.md) : inspection, correction, création, template, import Word, fusion de données, finalisation.
-- [editorial-recipes.md](references/editorial-recipes.md) : magazine, brochure, rapport, couverture, catalogue ; pages témoins avant de généraliser.
+- [editorial-recipes.md](references/editorial-recipes.md) : magazine, brochure, rapport, couverture, catalogue ; pages témoins avant de généraliser ; recettes de script éprouvées (champs `{{nom}}`, chaînage jusqu'à zéro excès, liens réparés par nom de fichier).
 - [art-direction.md](references/art-direction.md) : hiérarchie, grille, typographie, rythme, couleur, critique visuelle.
 - [proof-and-recovery.md](references/proof-and-recovery.md) : avant une opération risquée, après un délai ou une erreur, pour un rollback ou la remise finale.
 
 ## Incertitude et reprise
 
+- Un appel refusé renvoie `code`, `outcome` (`not_done`, `unknown`, `partial`), `retry_safe` et, si utile, `nextTool` : suivre `nextTool` (jeton périmé → `silent_inspect_document`, issue inconnue → `silent_operation_status`) avant de renvoyer l'appel.
 - Délai dépassé ou déconnexion : `silent_operation_status`. Tant qu'une opération reste `pending`, aucune nouvelle écriture.
 - Verrou orphelin : `silent_reconcile_unknown_operation`. S'il demande un redémarrage (`RECONCILIATION_RESTART_REQUIRED` ou preuve introuvable), fermer complètement InDesign, le relancer, puis recommencer.
 - Dérive : `silent_restore_backup` avec le `backupId`, puis relire le document restauré.

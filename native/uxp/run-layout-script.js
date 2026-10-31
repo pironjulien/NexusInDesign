@@ -41,6 +41,8 @@
   }
   const userInput = @@input@@;
   const userCode = @@code@@;
+  const undoName = @@undoName@@;
+  let grouped = false;
   const previousInteraction = app.scriptPreferences.userInteractionLevel;
   const previousRedraw = app.scriptPreferences.enableRedraw;
   let value = null;
@@ -49,7 +51,12 @@
     app.scriptPreferences.userInteractionLevel = indesign.UserInteractionLevels.NEVER_INTERACT !== undefined ? indesign.UserInteractionLevels.NEVER_INTERACT : indesign.UserInteractionLevels.neverInteract;
     app.scriptPreferences.enableRedraw = false;
     const executeUserCode = new Function("app", "indesign", "doc", "input", '"use strict"; return (async function () {\n' + userCode + '\n}).call(null);');
-    value = await executeUserCode(app, indesign, target.doc, userInput);
+    // Une seule étape d'annulation : la partie synchrone du script (tout ce qui précède son premier await) s'exécute
+    // dans un doScript ENTIRE_SCRIPT nommé ; un doScript UXP asynchrone ne regroupe rien.
+    let pending = null;
+    try { app.doScript(() => { pending = executeUserCode(app, indesign, target.doc, userInput); }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.ENTIRE_SCRIPT, undoName); grouped = pending !== null; } catch (_) {}
+    if (pending === null) pending = executeUserCode(app, indesign, target.doc, userInput);
+    value = await pending;
   } catch (error) {
     scriptError = { message: String(error && error.message ? error.message : error), line: error && error.line !== undefined ? Number(error.line) : null };
   } finally {
@@ -58,19 +65,26 @@
   }
   // Seuls les documents dont l'empreinte a changé avancent : un document non touché (cible d'un script de lecture
   // compris) garde sa révision et son jeton, et n'est pas marqué modifié par l'étiquette de révision.
+  // AUTO_UNDO : l'étiquette de révision rejoint l'étape du script, une annulation rend aussi l'ancienne révision.
   const revisions = [];
-  for (const entry of open) {
-    try {
-      if (entry.doc && entry.doc.isValid !== false) {
-        const after = documentStateToken(entry.doc);
-        if (after !== entry.stateToken) {
-          const next = entry.revision + 1;
-          entry.doc.insertLabel(label, String(next));
-          revisions.push({ documentId: entry.documentId, revision: next, stateToken: after });
+  const writeRevisions = () => {
+    revisions.length = 0;
+    for (const entry of open) {
+      try {
+        if (entry.doc && entry.doc.isValid !== false) {
+          const after = documentStateToken(entry.doc);
+          if (after !== entry.stateToken) {
+            const next = entry.revision + 1;
+            entry.doc.insertLabel(label, String(next));
+            revisions.push({ documentId: entry.documentId, revision: next, stateToken: after });
+          }
         }
-      }
-    } catch (_) {}
-  }
+      } catch (_) {}
+    }
+  };
+  let labelled = false;
+  if (grouped) { try { app.doScript(() => { writeRevisions(); labelled = true; }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.AUTO_UNDO, undoName); } catch (_) {} }
+  if (!labelled) writeRevisions();
   const targetValid = target.doc && target.doc.isValid !== false;
   let saved = false;
   if (@@save@@ && targetValid && !scriptError) { target.doc.save(); saved = true; }
@@ -89,6 +103,8 @@
     } catch (error) { preview = { error: String(error && error.message ? error.message : error) }; }
   }
   const current = revisions.find((entry) => entry.documentId === wanted);
+  let undo = null;
+  if (current && targetValid) { try { undo = { name: undoName, singleStep: grouped && String(target.doc.undoName) === undoName }; } catch (_) {} }
   const finalStateToken = targetValid ? documentStateToken(target.doc) : null;
   let closed = false;
   if (@@close@@ && saved) { await target.doc.close(indesign.SaveOptions.NO); closed = true; }
@@ -105,5 +121,6 @@
     closed,
     backups,
     preview,
+    undo,
     operationId: __operationId
   });

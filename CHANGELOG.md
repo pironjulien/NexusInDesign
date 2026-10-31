@@ -5,6 +5,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-10-31
+
+### Added
+- One-step undo: the synchronous part of a `run_layout_script` or `execute_uxp_silent` script (everything before its
+  first `await`) runs in a named `doScript` with `UndoModes.ENTIRE_SCRIPT` ("Nexus : <reason>"), and the revision label
+  joins that step (`AUTO_UNDO`): one `undo()` removes the script's changes, a failed script's partial changes included.
+  The result reports `undo.name` and `undo.singleStep`. (A COM-level `DoScript` undo mode does not group asynchronous
+  UXP scripts; checked in InDesign 2026.)
+- `run_layout_script` and `preview_layout` return capped thumbnails (JPEG, longest side 1024 px, 4 pages at most) as
+  MCP image content next to the PNG paths, with a `thumbnails` summary.
+- `preview_layout` `annotate: true`: the preview is rendered from a hidden private copy of the document (its safety
+  backup, opened without a window and closed unsaved) carrying an annotation layer: margins, column gutters, each
+  item's outline and `#id`, overset text in red. The source stays unchanged (fingerprint checked before and after).
+- `analyze_layout` read-only typographic audit (warnings, never blocking): `STYLE_OVERRIDE`, `UNSTYLED_TEXT`,
+  `INCONSISTENT_POINT_SIZE`, `INCONSISTENT_LEADING`, `LEADING_TIGHTER_THAN_SIZE`, with the stories to fix; the snapshot
+  gains a `typography` section (paragraphs grouped by style, no text).
+- Skill recipes tested in InDesign 2026: fill `{{fields}}` and list the remaining ones, chain pages until no overset
+  text, relink missing links by file name.
+
+### Changed
+- Every failed call returns structured content in the convention shared with NexusBrowser: `code`, `outcome`
+  (`not_done`, `unknown`, `partial`), `retry_safe` and, when one unblocks the agent, `nextTool` (stale token →
+  `silent_inspect_document`, unknown outcome → `silent_operation_status`). A failed `run_layout_script` script reports
+  `outcome` `partial` when it changed the document, `not_done` otherwise.
+
 ## [4.0.2] - 2026-10-31
 
 ### Fixed

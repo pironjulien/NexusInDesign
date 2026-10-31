@@ -43,6 +43,7 @@ internal static partial class UxpTemplates
                 "STATE_FUNCTION" => Load("state-function.js").TrimEnd('\n'),
                 "PROFILE_HELPERS" => Load("profile-helpers.js"),
                 "AUDIT_FUNCTIONS" => Load("audit-functions.js").TrimEnd('\n'),
+                "ANNOTATE_FUNCTIONS" => Load("annotate-functions.js").TrimEnd('\n'),
                 _ => throw new ToolError("GENERATED_UXP_INPUT_MISSING", $"Le script UXP {name} attend la valeur {key}; il n’a pas été envoyé à InDesign."),
             };
         });

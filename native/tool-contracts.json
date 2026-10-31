@@ -2,7 +2,7 @@
   {
     "name": "analyze_layout",
     "title": "Analyser la mise en page",
-    "description": "Analyse sans modification la géométrie, les ressources, les styles et les écarts à un contrat de mise en page; renvoie une empreinte stable réutilisable.",
+    "description": "Analyse sans modification la géométrie, les ressources, les styles, la typographie (remplacements locaux, texte sans style, corps et interlignages incohérents) et les écarts à un contrat de mise en page; renvoie une empreinte stable réutilisable.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1572,7 +1572,7 @@
   {
     "name": "preview_layout",
     "title": "Prévisualiser la mise en page",
-    "description": "Produit un aperçu PNG multipage vérifié et joint le diagnostic de mise en page correspondant.",
+    "description": "Produit un aperçu PNG multipage vérifié (vignettes jointes à la réponse), annoté sur demande depuis une copie cachée, et joint le diagnostic de mise en page correspondant.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1612,6 +1612,11 @@
         "overwrite": {
           "default": false,
           "type": "boolean"
+        },
+        "annotate": {
+          "default": false,
+          "type": "boolean",
+          "description": "Rend l’aperçu depuis une copie cachée annotée (identifiants des blocs, marges, colonnes, texte en excès en rouge) ; le document source reste inchangé."
         },
         "maxItems": {
           "default": 20000,
@@ -1782,6 +1787,7 @@
         "resolution",
         "transparentBackground",
         "overwrite",
+        "annotate",
         "maxItems",
         "contract",
         "reason"
@@ -1811,7 +1817,7 @@
   {
     "name": "run_layout_script",
     "title": "Script de mise en page rapide",
-    "description": "Voie normale pour modifier un document : en un seul passage InDesign, contrôle revision et stateToken, sauvegarde tous les documents ouverts (restaurables par silent_restore_backup), exécute le code UXP (app, indesign, doc, input ; return pour renvoyer une valeur), enregistre si save=true, exporte un aperçu PNG relu, puis ferme si close=true (avec save=true). Renvoie la nouvelle revision et le nouveau stateToken : enchaînez les appels sans réinspecter. Un échec du script renvoie scriptOk=false, l’erreur, l’aperçu et backupId, sans bloquer la suite. Ce code libre peut accéder aux fichiers et au réseau.",
+    "description": "Voie normale pour modifier un document : en un seul passage InDesign, contrôle revision et stateToken, sauvegarde tous les documents ouverts (restaurables par silent_restore_backup), exécute le code UXP (app, indesign, doc, input ; return pour renvoyer une valeur), enregistre si save=true, exporte un aperçu PNG relu (vignette jointe à la réponse), puis ferme si close=true (avec save=true). Les modifications faites avant le premier await forment une seule étape d’annulation InDesign nommée « Nexus : <reason> ». Renvoie la nouvelle revision et le nouveau stateToken : enchaînez les appels sans réinspecter. Un échec du script renvoie scriptOk=false, l’erreur, l’aperçu et backupId, sans bloquer la suite. Ce code libre peut accéder aux fichiers et au réseau.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,

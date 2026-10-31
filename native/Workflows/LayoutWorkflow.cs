@@ -154,6 +154,7 @@ internal static partial class LayoutWorkflow
                     {
                         ["name"] = style["name"]?.DeepClone(), ["pointSize"] = size, ["minimumPt"] = minimumPt,
                     }));
+        if (snapshot["typography"] is JsonObject typography) issues.AddRange(TypographyIssues(typography));
         foreach (var item in items)
         {
             var bounds = (item["bounds"] as JsonArray ?? []).Select(Number).ToList();
@@ -193,6 +194,37 @@ internal static partial class LayoutWorkflow
             ["issues"] = Json.Array(issues),
             ["contractApplied"] = contract.DeepClone(),
         };
+    }
+
+    /// <summary>
+    /// Read-only typographic audit (warnings, never blocking): local overrides of a paragraph style, text left in the
+    /// default styles, one style rendered at several sizes or leadings, leading tighter than the type size.
+    /// </summary>
+    private static IEnumerable<JsonObject> TypographyIssues(JsonObject typography)
+    {
+        static JsonNode? Clone(JsonNode? node) => node?.DeepClone();
+        if (Json.IsTrue(typography, "truncated"))
+            yield return Issue("TYPOGRAPHY_AUDIT_TRUNCATED", "warning", "L’audit typographique a atteint la limite de paragraphes ; certains récits n’ont pas été lus.",
+                new JsonObject { ["inspectedParagraphs"] = Clone(typography["inspectedParagraphs"]), ["totalParagraphs"] = Clone(typography["totalParagraphs"]) });
+        foreach (var style in Objects(typography["styles"]))
+        {
+            var details = new JsonObject { ["style"] = Clone(style["name"]), ["styleId"] = Clone(style["id"]) };
+            if (Json.Long(style, "overridden") is > 0)
+                yield return Issue("STYLE_OVERRIDE", "warning", "Des paragraphes portent des remplacements locaux par rapport à leur style.", Json.Merge((JsonObject)details.DeepClone(),
+                    new JsonObject { ["paragraphs"] = Clone(style["overridden"]), ["storyIds"] = Clone(style["overriddenStoryIds"]) }));
+            if ((style["pointSizes"] as JsonArray)?.Count > 1)
+                yield return Issue("INCONSISTENT_POINT_SIZE", "warning", "Un même style de paragraphe est rendu dans plusieurs corps.", Json.Merge((JsonObject)details.DeepClone(),
+                    new JsonObject { ["pointSizes"] = Clone(style["pointSizes"]), ["storyIds"] = Clone(style["storyIds"]) }));
+            if ((style["leadings"] as JsonArray)?.Count > 1)
+                yield return Issue("INCONSISTENT_LEADING", "warning", "Un même style de paragraphe est rendu avec plusieurs interlignages.", Json.Merge((JsonObject)details.DeepClone(),
+                    new JsonObject { ["leadings"] = Clone(style["leadings"]), ["storyIds"] = Clone(style["storyIds"]) }));
+        }
+        if (Json.Long(typography["unstyled"], "paragraphs") is > 0)
+            yield return Issue("UNSTYLED_TEXT", "warning", "Du texte reste dans le style par défaut ([Paragraphe standard] ou [Sans style de paragraphe]).",
+                new JsonObject { ["paragraphs"] = Clone(typography["unstyled"]?["paragraphs"]), ["storyIds"] = Clone(typography["unstyled"]?["storyIds"]) });
+        if (Json.Long(typography["tightLeading"], "paragraphs") is > 0)
+            yield return Issue("LEADING_TIGHTER_THAN_SIZE", "warning", "L’interlignage de paragraphes est inférieur à leur corps (lignes qui se chevauchent).",
+                new JsonObject { ["paragraphs"] = Clone(typography["tightLeading"]?["paragraphs"]), ["storyIds"] = Clone(typography["tightLeading"]?["storyIds"]) });
     }
 
     public static JsonObject Analyze(JsonObject snapshot, JsonObject? contract)

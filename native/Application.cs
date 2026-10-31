@@ -81,9 +81,9 @@ internal sealed class Application
     {
         var started = Stopwatch.StartNew();
         var tool = Catalog.Find(name);
-        if (tool is null) return Error($"Outil inconnu : {name}");
+        if (tool is null) return Error(new ToolError("TOOL_UNKNOWN", $"Outil inconnu : {name}"));
         var args = (JsonObject)arguments.DeepClone();
-        if (ToolCatalog.Validate(tool, args) is { } invalid) return Error($"Paramètres invalides : {invalid}");
+        if (ToolCatalog.Validate(tool, args) is { } invalid) return Error(new ToolError("ARGUMENTS_INVALID", $"Paramètres invalides : {invalid}"));
         long? documentId = Json.Long(args, "documentId"), revision = Json.Long(args, "expectedRevision");
         string? reason = Json.Str(args, "reason");
         try
@@ -97,7 +97,7 @@ internal sealed class Application
             {
                 DocumentId = documentId, ExpectedRevision = revision, Reason = reason, ErrorCode = error.Code, DurationMs = started.ElapsedMilliseconds,
             });
-            return Error($"{error.Code}: {error.Message}");
+            return Error(error);
         }
         try
         {
@@ -105,7 +105,7 @@ internal sealed class Application
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return Error("AUDIT_UNAVAILABLE: la commande n’a pas été envoyée à InDesign car le journal de début est indisponible.");
+            return Error(new ToolError("AUDIT_UNAVAILABLE", "la commande n’a pas été envoyée à InDesign car le journal de début est indisponible."));
         }
 
         JsonObject result;
@@ -130,7 +130,7 @@ internal sealed class Application
                 BackupIds = new[] { error.BackupId }.Concat(error.SafetyBackups?.OfType<JsonObject>().Select(backup => Json.Str(backup, "backupId")) ?? []),
                 OperationId = error.OperationId, RequiresInspection = error.RequiresInspection,
             });
-            return Error($"{error.Code}: {error.Message}", error.HasRecovery ? error.Recovery() : null);
+            return Error(error);
         }
         finally
         {
@@ -152,11 +152,13 @@ internal sealed class Application
         {
             result["auditWarning"] ??= "Le résultat InDesign est valide, mais l’événement final n’a pas pu être écrit dans le journal d’audit.";
         }
-        return new JsonObject
-        {
-            ["content"] = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = result.ToJsonString(Json.Compact) }),
-            ["structuredContent"] = result,
-        };
+        var previews = Thumbnails.PreviewPaths(name, result);
+        var images = previews.Take(Thumbnails.MaxImages).Select(Thumbnails.Image).OfType<JsonObject>().ToList();
+        if (previews.Count > 0)
+            result["thumbnails"] = new JsonObject { ["returned"] = images.Count, ["previews"] = previews.Count, ["maxSide"] = Thumbnails.MaxSide };
+        var content = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = result.ToJsonString(Json.Compact) });
+        foreach (var image in images) content.Add(image);
+        return new JsonObject { ["content"] = content, ["structuredContent"] = result };
     }
 
     private void TryAudit(AuditLogger.Event entry)
@@ -164,12 +166,17 @@ internal sealed class Application
         try { audit.Write(entry); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
     }
 
-    private static JsonObject Error(string message, JsonObject? details = null)
+    /// <summary>
+    /// A failed call, in NexusBrowser's shared convention: outcome not_done (nothing reached InDesign: fix and resend),
+    /// unknown (it may have acted: check before resending) or partial; retry_safe only for not_done; nextTool names the
+    /// tool that unblocks the agent when there is one.
+    /// </summary>
+    private static JsonObject Error(ToolError error)
     {
-        if (details is null)
-            return new JsonObject { ["isError"] = true, ["content"] = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = message }) };
-        var structured = new JsonObject { ["error"] = message };
-        Json.Merge(structured, details);
+        var (outcome, nextTool) = Guidance(error);
+        var structured = new JsonObject { ["error"] = $"{error.Code}: {error.Message}", ["code"] = error.Code, ["outcome"] = outcome, ["retry_safe"] = outcome == "not_done" };
+        Json.SetIfNotNull(structured, "nextTool", nextTool);
+        if (error.HasRecovery) Json.Merge(structured, error.Recovery());
         return new JsonObject
         {
             ["isError"] = true,
@@ -177,6 +184,17 @@ internal sealed class Application
             ["structuredContent"] = structured,
         };
     }
+
+    internal static (string Outcome, string? NextTool) Guidance(ToolError error) => error.Code switch
+    {
+        "MUTATION_IN_PROGRESS" => ("not_done", "silent_operation_status"),
+        _ when error.RequiresInspection => ("unknown", error.OperationId is null ? "silent_inspect_document" : "silent_operation_status"),
+        "STATE_CONFLICT" or "REVISION_CONFLICT" or "STATE_TOKEN_REQUIRED" or "DOCUMENT_STATE_CONFLICT" or "DOCUMENT_INVENTORY_CONFLICT"
+            or "DOCUMENT_CHANGED_DURING_READ" => ("not_done", "silent_inspect_document"),
+        "DOCUMENT_NOT_FOUND" => ("not_done", "silent_list_documents"),
+        "SILENT_CHANNEL_UNAVAILABLE" or "INDESIGN_NOT_REGISTERED" => ("not_done", "silent_status"),
+        _ => ("not_done", null),
+    };
 
     private void ApplyPathPolicy(ToolContract tool, JsonObject args)
     {
@@ -309,9 +327,9 @@ internal sealed class Application
             }
             case "run_layout_script":
                 return await Silent().RunLayoutScript(Id(), Revision(), Token(), Json.Str(args, "code")!, args["input"]?.DeepClone(),
-                    Json.IsTrue(args, "save"), Json.IsTrue(args, "close"), Json.Str(args, "previewPages"), Json.Long(args, "previewResolution") ?? 96).ConfigureAwait(false);
+                    Json.IsTrue(args, "save"), Json.IsTrue(args, "close"), Json.Str(args, "previewPages"), Json.Long(args, "previewResolution") ?? 96, Json.Str(args, "reason")).ConfigureAwait(false);
             case "execute_uxp_silent":
-                return await Silent().ExecuteDocument(Id(), Revision(), Token(), Json.Str(args, "code")!, args["input"]?.DeepClone()).ConfigureAwait(false);
+                return await Silent().ExecuteDocument(Id(), Revision(), Token(), Json.Str(args, "code")!, args["input"]?.DeepClone(), Json.Str(args, "reason")).ConfigureAwait(false);
         }
         if (StructuredReads.Contains(tool.Name)) return await Silent().ReadDocument(tool.Name, Id()).ConfigureAwait(false);
         if (tool.Route == "workflow") return await DispatchWorkflow(tool, args, verifiedToken).ConfigureAwait(false);
@@ -406,6 +424,7 @@ internal sealed class Application
                     IncludeHiddenLayers = Json.IsTrue(args, "includeHiddenLayers"),
                     IgnorePreflightErrors = Json.IsTrue(args, "ignorePreflightErrors"),
                     IncludeIdml = Json.Bool(args, "includeIdml") ?? true,
+                    Annotate = Json.IsTrue(args, "annotate"),
                     IncludePdf = Json.Bool(args, "includePdf") ?? true,
                     PdfPresetName = Json.Str(args, "pdfPresetName"),
                 }).ConfigureAwait(false);
@@ -483,14 +502,21 @@ internal sealed class Application
             case "preview_layout":
             {
                 var before = await CaptureLayout(args).ConfigureAwait(false);
-                var exportArgs = Pick(args, "documentId", "expectedRevision", "expectedStateToken", "reason", "folderPath", "pageRange", "resolution", "transparentBackground", "overwrite");
+                var exportArgs = Pick(args, "documentId", "expectedRevision", "expectedStateToken", "reason", "folderPath", "pageRange", "resolution", "transparentBackground", "overwrite", "annotate");
                 var preview = await DispatchDirect("export_png", exportArgs, verifiedToken).ConfigureAwait(false);
                 var afterArgs = (JsonObject)args.DeepClone();
                 afterArgs["expectedRevision"] = preview["revision"]?.DeepClone() ?? args["expectedRevision"]?.DeepClone();
                 var after = await CaptureLayout(afterArgs).ConfigureAwait(false);
                 if (Json.Str(before, "fingerprint") != Json.Str(after, "fingerprint"))
                     throw new ToolError("PREVIEW_ROUND_TRIP_MISMATCH", "La mise en page a changé pendant la production de l’aperçu.", true) { PartialOutputPath = Json.Str(args, "folderPath") };
-                return new JsonObject { ["preview"] = preview, ["analysis"] = after, ["sourceUnchanged"] = true };
+                var output = new JsonObject { ["preview"] = preview, ["analysis"] = after, ["sourceUnchanged"] = true };
+                if (Json.IsTrue(args, "annotate"))
+                    output["annotationLegend"] = new JsonObject
+                    {
+                        ["margins"] = "cadre bleu clair", ["gutters"] = "bandes violettes", ["items"] = "contour bleu et étiquette jaune #id (id de analyze_layout)",
+                        ["overset"] = "contour rouge épais et étiquette rouge « excès »",
+                    };
+                return output;
             }
             case "finalize_layout":
             {

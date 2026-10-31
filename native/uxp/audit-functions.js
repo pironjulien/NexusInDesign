@@ -106,3 +106,65 @@ async function auditNativePath(doc) {
   }
   return null;
 }
+function auditTypography(doc, limit) {
+  // Lecture seule : paragraphes regroupés par style (corps, interlignage, remplacements locaux), sans le texte lui-même.
+  const leadingEnum = indesign.Leading || {};
+  const autoLeading = leadingEnum.AUTO !== undefined ? leadingEnum.AUTO : leadingEnum.auto;
+  const round = (value) => Math.round(Number(value) * 100) / 100;
+  const list = (value, length) => (Array.isArray(value) ? value : Array.from({ length }, () => value));
+  const defaultStyles = new Set();
+  for (const index of [0, 1]) { try { defaultStyles.add(Number(doc.paragraphStyles.item(index).id)); } catch (_) {} }
+  const styles = new Map();
+  const unstyled = { paragraphs: 0, storyIds: [] };
+  const tightLeading = { paragraphs: 0, storyIds: [] };
+  const note = (bucket, storyId) => { bucket.paragraphs += 1; if (bucket.storyIds.length < 10 && !bucket.storyIds.includes(storyId)) bucket.storyIds.push(storyId); };
+  let inspected = 0;
+  let total = 0;
+  let truncated = false;
+  for (let storyIndex = 0; storyIndex < doc.stories.length; storyIndex += 1) {
+    const story = auditCollectionItem(doc.stories, storyIndex);
+    let count = 0;
+    try { count = story.paragraphs.length; } catch (_) { continue; }
+    total += count;
+    if (count === 0) continue;
+    if (inspected + count > limit) { truncated = true; continue; }
+    let refs; let sizes; let leadings; let overrides; let contents;
+    try {
+      const every = story.paragraphs.everyItem();
+      refs = list(every.appliedParagraphStyle, count);
+      sizes = list(every.pointSize, count);
+      leadings = list(every.leading, count);
+      overrides = list(every.styleOverridden, count);
+      contents = list(every.contents, count);
+    } catch (_) { continue; }
+    inspected += count;
+    const storyId = Number(story.id);
+    for (let index = 0; index < count; index += 1) {
+      if (String(contents[index] || "").trim() === "") continue;
+      let styleId = null; let styleName = "";
+      try { styleId = Number(refs[index].id); styleName = String(refs[index].name || ""); } catch (_) {}
+      const size = Number(sizes[index]);
+      const leading = leadings[index] === autoLeading || !Number.isFinite(Number(leadings[index])) ? "auto" : round(leadings[index]);
+      if (styleId === null || defaultStyles.has(styleId)) note(unstyled, storyId);
+      if (leading !== "auto" && Number.isFinite(size) && leading < size) note(tightLeading, storyId);
+      const key = String(styleId);
+      let entry = styles.get(key);
+      if (!entry) {
+        entry = { id: styleId, name: styleName, paragraphs: 0, overridden: 0, pointSizes: [], leadings: [], storyIds: [], overriddenStoryIds: [] };
+        styles.set(key, entry);
+      }
+      entry.paragraphs += 1;
+      if (Number.isFinite(size) && !entry.pointSizes.includes(round(size))) entry.pointSizes.push(round(size));
+      if (!entry.leadings.includes(leading)) entry.leadings.push(leading);
+      if (entry.storyIds.length < 10 && !entry.storyIds.includes(storyId)) entry.storyIds.push(storyId);
+      if (overrides[index] === true) {
+        entry.overridden += 1;
+        if (entry.overriddenStoryIds.length < 10 && !entry.overriddenStoryIds.includes(storyId)) entry.overriddenStoryIds.push(storyId);
+      }
+    }
+  }
+  const byNumber = (left, right) => (left === "auto" ? 1 : right === "auto" ? -1 : left - right);
+  const summary = [...styles.values()].map((entry) => ({ ...entry, pointSizes: entry.pointSizes.sort(byNumber), leadings: entry.leadings.sort(byNumber) }));
+  summary.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : Number(left.id) - Number(right.id)));
+  return { inspectedParagraphs: inspected, totalParagraphs: total, truncated, styles: summary, unstyled, tightLeading };
+}

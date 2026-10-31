@@ -37,7 +37,7 @@ internal sealed partial class SilentBridge
         public string Render(string template) => UxpTemplates.Render(template, Raw);
     }
 
-    private static readonly HashSet<string> AuditSections = ["all", "document", "pages", "items", "links", "fonts", "images", "overset", "designSystem"];
+    private static readonly HashSet<string> AuditSections = ["all", "document", "pages", "items", "links", "fonts", "images", "overset", "designSystem", "typography"];
 
     // ----- Reads -----------------------------------------------------------------------------------------------------
 
@@ -146,7 +146,8 @@ internal sealed partial class SilentBridge
             .Add("includeFonts", Has("fonts"))
             .Add("includeImages", Has("images"))
             .Add("includeOverset", Has("overset"))
-            .Add("includeDesignSystem", Has("designSystem"));
+            .Add("includeDesignSystem", Has("designSystem"))
+            .Add("includeTypography", Has("typography"));
         var result = await RunUxpRead("audit-document.js", inputs.Render("audit-document.js"), inputs.Values).ConfigureAwait(false);
         if (result["audit"] is not JsonObject audit || Json.Long(audit, "documentId") != documentId || !Json.StateToken().IsMatch(Json.Str(audit, "stateToken") ?? ""))
             throw Fail("AUDIT_RESULT_INVALID", "Le résultat de l’audit silencieux est invalide.");
@@ -163,7 +164,7 @@ internal sealed partial class SilentBridge
             "get_fonts" => ["fonts"],
             "get_overset_text" => ["overset"],
             "get_images" => ["images"],
-            "analyze_layout" => ["pages", "items", "links", "fonts", "images", "designSystem"],
+            "analyze_layout" => ["pages", "items", "links", "fonts", "images", "designSystem", "typography"],
             _ => throw Fail("SILENT_READ_UNKNOWN", "Lecture silencieuse inconnue."),
         };
         var audit = await AuditDocument(documentId, maxItems ?? 20_000, sections).ConfigureAwait(false);
@@ -254,6 +255,7 @@ internal sealed partial class SilentBridge
                 ["layers"] = new JsonArray(), ["swatches"] = new JsonArray(), ["paragraphStyles"] = new JsonArray(),
                 ["characterStyles"] = new JsonArray(), ["objectStyles"] = new JsonArray(),
             },
+            ["typography"] = audit["typography"]?.DeepClone(),
             ["totalItems"] = audit["totalItems"]?.DeepClone() ?? 0,
             ["truncated"] = Json.IsTrue(audit, "truncated"),
         };
@@ -559,6 +561,8 @@ internal sealed partial class SilentBridge
         public bool IncludeIdml { get; init; } = true;
         public bool IncludePdf { get; init; } = true;
         public string? PdfPresetName { get; init; }
+        /// <summary>PNG only: render from a hidden private copy carrying an annotation layer (the source is untouched).</summary>
+        public bool Annotate { get; init; }
     }
 
     private static bool ValidAbsolute(string? value, string extension) => value is not null && Path.IsPathFullyQualified(value)
@@ -601,6 +605,7 @@ internal sealed partial class SilentBridge
         {
             var documents = await ExpectState(request.DocumentId, request.ExpectedRevision, request.ExpectedStateToken, "Document introuvable avant l’export silencieux.").ConfigureAwait(false);
             var safetyBackups = new JsonArray();
+            string? annotatedCopy = null;
             try
             {
                 safetyBackups = await BackupDocuments(documents).ConfigureAwait(false);
@@ -629,6 +634,14 @@ internal sealed partial class SilentBridge
                         break;
                     default:
                         actionTemplate = "export-png-action.js";
+                        if (request.Annotate)
+                        {
+                            string source = Json.Str(safetyBackups.OfType<JsonObject>().FirstOrDefault(backup => Json.Long(backup, "documentId") == request.DocumentId), "backupPath")
+                                ?? throw Fail("ANNOTATED_COPY_UNAVAILABLE", "La sauvegarde du document à annoter est introuvable.");
+                            annotatedCopy = Path.Combine(RuntimeDirectory, $"annotate-{operationId}.indd");
+                            File.Copy(source, annotatedCopy, overwrite: false);
+                        }
+                        action.Add("annotateCopyPath", annotatedCopy is null ? null : UxpTemplates.UxpPath(annotatedCopy));
                         action.Add("folderPath", request.FolderPath is null ? null : UxpTemplates.UxpPath(request.FolderPath))
                             .Add("filePath", request.FilePath is null ? null : UxpTemplates.UxpPath(request.FilePath))
                             .Add("pageId", request.PageId)
@@ -654,6 +667,10 @@ internal sealed partial class SilentBridge
             catch (Exception exception)
             {
                 throw ToolError.From(exception).WithBackups(safetyBackups, request.DocumentId);
+            }
+            finally
+            {
+                if (annotatedCopy is not null) DeleteQuietly(annotatedCopy);
             }
         });
     }
@@ -687,7 +704,7 @@ internal sealed partial class SilentBridge
         });
     }
 
-    public Task<JsonObject> ExecuteDocument(long documentId, long expectedRevision, string expectedStateToken, string code, JsonNode? input)
+    public Task<JsonObject> ExecuteDocument(long documentId, long expectedRevision, string expectedStateToken, string code, JsonNode? input, string? reason = null)
     {
         string operationId = Json.NewId();
         return WithMutationGuard(operationId, async () =>
@@ -700,7 +717,8 @@ internal sealed partial class SilentBridge
                 .Add("expectedStateToken", expectedStateToken)
                 .Add("expectedDocuments", ExpectedDocuments(safetyBackups))
                 .Add("input", input)
-                .Add("code", code);
+                .Add("code", code)
+                .Add("undoName", UndoName(reason));
             try
             {
                 var result = await RunUxpTracked("execute-document.js", inputs.Render("execute-document.js"), inputs.Values, operationId).ConfigureAwait(false);
@@ -723,7 +741,7 @@ internal sealed partial class SilentBridge
     /// close, in one tracked UXP pass. A failing script is a known outcome: returned with the backups, never blocking.
     /// </summary>
     public Task<JsonObject> RunLayoutScript(long documentId, long expectedRevision, string expectedStateToken, string code, JsonNode? input,
-        bool save, bool close, string? previewPages, long previewResolution)
+        bool save, bool close, string? previewPages, long previewResolution, string? reason = null)
     {
         if (close && !save) throw Fail("CLOSE_REQUIRES_SAVE", "close exige save=true : fermer sans enregistrer perdrait le travail du script.");
         string operationId = Json.NewId();
@@ -744,6 +762,7 @@ internal sealed partial class SilentBridge
                 .Add("slots", Json.Array(slots.Select(slot => (JsonNode)UxpTemplates.UxpPath(slot.BackupPath))))
                 .Add("input", input)
                 .Add("code", code)
+                .Add("undoName", UndoName(reason))
                 .Add("save", save)
                 .Add("close", close)
                 .Add("previewResolution", previewResolution)
@@ -777,11 +796,25 @@ internal sealed partial class SilentBridge
             Json.SetIfNotNull(outcome, "backupId", Json.Str(safetyBackups.OfType<JsonObject>().FirstOrDefault(entry => Json.Long(entry, "documentId") == documentId), "backupId"));
             if (!Json.IsTrue(outcome, "scriptOk"))
             {
+                // Same convention as a failed call: partial when the script changed a document before failing.
+                bool changed = (outcome["revisions"] as JsonArray)?.Count > 0;
                 outcome["requiresInspection"] = true;
-                outcome["nextStep"] = "Le script a échoué : relisez l’aperçu, corrigez puis relancez, ou restaurez avec silent_restore_backup et backupId.";
+                outcome["outcome"] = changed ? "partial" : "not_done";
+                outcome["retry_safe"] = !changed;
+                outcome["nextStep"] = changed
+                    ? "Le script a échoué après avoir modifié le document : relisez l’aperçu, corrigez puis relancez, ou restaurez avec silent_restore_backup et backupId (ses modifications forment une seule étape d’annulation InDesign)."
+                    : "Le script a échoué sans modifier le document : corrigez puis relancez (restauration possible avec silent_restore_backup et backupId).";
             }
             return outcome;
         });
+    }
+
+    /// <summary>The name of the script's single undo step in InDesign's Edit menu.</summary>
+    internal static string UndoName(string? reason)
+    {
+        string text = System.Text.RegularExpressions.Regex.Replace(reason ?? "", @"\s+", " ").Trim();
+        if (text.Length == 0) text = "script";
+        return "Nexus : " + (text.Length > 100 ? text[..99] + "…" : text);
     }
 
     public async Task<JsonObject> RestoreBackup(long documentId, long expectedRevision, string expectedStateToken, string backupId)

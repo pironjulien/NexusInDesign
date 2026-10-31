@@ -105,6 +105,7 @@
       characterStyles: auditCollectionSummary(doc.characterStyles, (style) => auditStyleSummary(style, "character")),
       objectStyles: auditCollectionSummary(doc.objectStyles, (style) => auditStyleSummary(style, "object"))
     } : emptyDesignSystem;
+    const typography = @@includeTypography@@ ? auditTypography(doc, itemLimit) : null;
     audit = {
       success: true, documentId: Number(doc.id), revision, capturedAt: new Date().toISOString(),
       document: {
@@ -114,7 +115,7 @@
         bleedMm: { top: Number(preferences.documentBleedTopOffset), inside: Number(preferences.documentBleedInsideOrLeftOffset), bottom: Number(preferences.documentBleedBottomOffset), outside: Number(preferences.documentBleedOutsideOrRightOffset) }
       },
       counts: { pages: doc.pages.length, spreads: doc.spreads.length, layers: doc.layers.length, masterSpreads: doc.masterSpreads.length },
-      pages, items, links, fonts, images, oversetText: { count: oversetFrames.length, frames: oversetFrames }, designSystem,
+      pages, items, links, fonts, images, oversetText: { count: oversetFrames.length, frames: oversetFrames }, designSystem, typography,
       totalItems, inspectedItems: items.length, truncated: @@includeItems@@ && totalItems > items.length
     };
   } finally {

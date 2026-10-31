@@ -1,4 +1,8 @@
+@@ANNOTATE_FUNCTIONS@@
   const outputDirectory = @@folderPath@@;
+  const annotateCopyPath = @@annotateCopyPath@@;
+  let exportDocument = targetDocument;
+  let annotated = null;
   const singleFilePath = @@filePath@@;
   const requestedPageId = @@pageId@@;
   const requestedPageRange = @@pageRange@@;
@@ -26,29 +30,35 @@
   };
   const exportedPaths = [];
   try {
+    if (annotateCopyPath !== null) {
+      exportStarted = true;
+      const opened = await openAnnotatedCopy(annotateCopyPath);
+      exportDocument = opened.copy;
+      annotated = opened.summary;
+    }
     preferences.exportResolution = @@resolution@@;
     preferences.transparentBackground = @@transparentBackground@@;
     preferences.exportingSpread = false;
     preferences.pngExportRange = exportRange;
     if (requestedPageId !== null) {
       let page = null;
-      for (let index = 0; index < targetDocument.pages.length; index += 1) { const candidate = targetDocument.pages.item(index); if (Number(candidate.id) === requestedPageId) { page = candidate; break; } }
+      for (let index = 0; index < exportDocument.pages.length; index += 1) { const candidate = exportDocument.pages.item(index); if (Number(candidate.id) === requestedPageId) { page = candidate; break; } }
       if (!page) { const error = new Error("Page introuvable"); error.code = "PAGE_NOT_FOUND"; throw error; }
       preferences.pageString = "+" + String(Number(page.documentOffset) + 1);
       exportStarted = true;
-      await targetDocument.exportFile(pngFormat, singleFilePath, false);
+      await exportDocument.exportFile(pngFormat, singleFilePath, false);
       exportedPaths.push(singleFilePath);
     } else {
-      const indexes = parsePageIndexes(requestedPageRange, targetDocument.pages.length);
+      const indexes = parsePageIndexes(requestedPageRange, exportDocument.pages.length);
       for (const index of indexes) {
         const targetPath = outputDirectory.replace(/[\\/]$/, "") + "/page-" + String(index + 1).padStart(4, "0") + ".png";
         preferences.pageString = "+" + String(index + 1);
         exportStarted = true;
-        await targetDocument.exportFile(pngFormat, targetPath, false);
+        await exportDocument.exportFile(pngFormat, targetPath, false);
         exportedPaths.push(targetPath);
       }
     }
-    exportResult = { success: true, paths: exportedPaths, resolution: @@resolution@@, pageId: requestedPageId, pageRange: requestedPageRange };
+    exportResult = { success: true, paths: exportedPaths, resolution: @@resolution@@, pageId: requestedPageId, pageRange: requestedPageRange, annotated };
   } catch (error) { exportFailure = error; }
   finally {
     try { preferences.exportResolution = previousResolution; } catch (_) { restorationFailures.push("png.resolution"); }
@@ -56,4 +66,5 @@
     try { preferences.exportingSpread = previousExportingSpread; } catch (_) { restorationFailures.push("png.spread"); }
     try { preferences.pageString = previousPageString; } catch (_) { restorationFailures.push("png.pageString"); }
     try { preferences.pngExportRange = previousRange; } catch (_) { restorationFailures.push("png.range"); }
+    if (exportDocument !== targetDocument) { try { await exportDocument.close(indesign.SaveOptions.NO); } catch (_) { restorationFailures.push("annotated.close"); } }
   }

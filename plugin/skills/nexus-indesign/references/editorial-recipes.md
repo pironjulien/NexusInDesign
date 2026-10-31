@@ -12,6 +12,7 @@ Utiliser ces recettes comme systèmes de décision, jamais comme styles prêts �
 - [Couverture complète](#couverture-complète)
 - [Catalogue](#catalogue)
 - [Accepter ou corriger](#accepter-ou-corriger)
+- [Recettes de script](#recettes-de-script)
 
 ## Formaliser la direction visuelle
 
@@ -130,3 +131,82 @@ Pour chaque témoin, classer les observations sans score moyen :
 - **Intention assumée :** exception visible, cohérente avec le brief, reproduite seulement là où elle sert le message et confirmée par le rendu.
 
 Corriger d'abord tous les défauts bloquants, puis les incohérences systémiques. Effectuer au plus trois cycles avec une hypothèse différente par cycle. Après acceptation des témoins, déployer les styles et gabarits, rendre un échantillon final réparti dans le document, lancer le préflight et comparer l'empreinte de mise en page.
+
+## Recettes de script
+
+Trois scripts éprouvés dans InDesign 2026, à passer tels quels dans `code` de `run_layout_script` avec leur `input`. Aucun n'utilise `await` avant ses modifications : chacun forme une seule étape d'annulation nommée « Nexus : <reason> ». Chacun renvoie de quoi vérifier sans relire tout le document ; regarder ensuite la vignette jointe.
+
+### Remplir des champs `{{nom}}`
+
+`input` : `{ "values": { "titre": "…", "date": "…" } }`. Renvoie le nombre de remplacements par champ et la liste des champs restants (`remaining`) : ne jamais inventer une valeur manquante, la demander.
+
+```js
+// input: { values: { "titre": "…", "date": "…" } } ; chaque {{nom}} connu prend sa valeur, le reste est listé.
+const values = input.values || {};
+const grep = (pattern) => {
+  app.findGrepPreferences = indesign.NothingEnum.NOTHING;
+  app.findGrepPreferences.findWhat = pattern;
+  try { return doc.findGrep(); } finally { app.findGrepPreferences = indesign.NothingEnum.NOTHING; }
+};
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const replaced = {};
+for (const [name, value] of Object.entries(values)) {
+  const found = grep("\\{\\{\\s*" + escape(name) + "\\s*\\}\\}");
+  for (let index = found.length - 1; index >= 0; index -= 1) found[index].contents = String(value);
+  replaced[name] = found.length;
+}
+const remaining = [...new Set(grep("\\{\\{[^{}]+\\}\\}").map((text) => String(text.contents).slice(2, -2).trim()))];
+return { replaced, remaining };
+```
+
+### Chaîner des pages jusqu'à zéro texte en excès
+
+`input` : `{ "frameId": <id d'un bloc du récit>, "maxPages": 50 }`. Ajoute en fin de document une page et un bloc chaîné aux marges (mêmes colonnes) tant que le récit déborde. `stillOverset: true` au plafond : revoir le corps, la grille ou le contenu plutôt qu'augmenter `maxPages`. Rendre ensuite les pages ajoutées (`previewPages`).
+
+```js
+// input: { frameId: <un bloc du récit>, maxPages: 50 } ; ajoute pages et blocs chaînés tant que le récit déborde.
+const story = doc.pageItems.itemByID(input.frameId).getElements()[0].parentStory;
+const containers = story.textContainers;
+let last = containers[containers.length - 1];
+const leftHand = indesign.PageSideOptions.LEFT_HAND;
+let added = 0;
+story.recompose();
+while (last.overflows && added < (input.maxPages || 50)) {
+  const page = doc.pages.add(indesign.LocationOptions.AT_END);
+  const [top, left, bottom, right] = page.bounds;
+  const margins = page.marginPreferences;
+  let inside = margins.left, outside = margins.right;
+  if (doc.documentPreferences.facingPages && page.side === leftHand) [inside, outside] = [outside, inside];
+  const next = page.textFrames.add({ geometricBounds: [top + margins.top, left + inside, bottom - margins.bottom, right - outside] });
+  next.textFramePreferences.textColumnCount = last.textFramePreferences.textColumnCount;
+  next.textFramePreferences.textColumnGutter = last.textFramePreferences.textColumnGutter;
+  last.nextTextFrame = next;
+  last = next;
+  added += 1;
+  story.recompose();
+}
+return { pagesAdded: added, stillOverset: last.overflows, pages: doc.pages.length };
+```
+
+### Réparer des liens par nom de fichier
+
+`input` : `{ "folder": "C:/Projet/Images" }`. Relie chaque lien manquant au fichier de même nom (casse ignorée) du dossier ; `notFound` liste ceux sans correspondance, `stillMissing` ce qui reste à traiter. Un fichier déplacé hors d'InDesign change l'empreinte du document : relire `silent_inspect_document` avant le script.
+
+```js
+// input: { folder: "C:/Projet/Images" } ; chaque lien manquant est relié au fichier de même nom dans ce dossier.
+const fs = require("fs");
+const folder = String(input.folder).replace(/\\/g, "/").replace(/\/+$/, "");
+const files = new Map(fs.readdirSync(folder).map((name) => [name.toLowerCase(), name]));
+const missing = String(indesign.LinkStatus.LINK_MISSING); // les énumérations UXP sont des objets : comparer leur texte
+const relinked = [];
+const notFound = [];
+for (const link of doc.links.everyItem().getElements()) {
+  if (String(link.status) !== missing) continue;
+  const match = files.get(String(link.name).toLowerCase());
+  if (!match) { notFound.push(link.name); continue; }
+  link.relink("file:" + folder + "/" + match); // relink attend une URI file:, pas un chemin nu
+  relinked.push(link.name);
+}
+const stillMissing = doc.links.everyItem().getElements().filter((link) => String(link.status) === missing).map((link) => link.name);
+return { relinked, notFound, stillMissing };
+```

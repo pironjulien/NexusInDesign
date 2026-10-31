@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
+using NexusInDesign.InDesign;
 using NexusInDesign.Security;
 using NexusInDesign.Verification;
 using NexusInDesign.Workflows;
@@ -208,4 +209,35 @@ public sealed class EngineUnitTests : IDisposable
         Assert.Contains("REQUIRED_PARAGRAPH_STYLE_MISSING", codes);
         Assert.False(Json.IsTrue(lint, "passed"));
     }
+
+    [Fact]
+    public void Typography_audit_reports_overrides_unstyled_text_and_inconsistent_sizes_as_warnings()
+    {
+        var snapshot = new JsonObject
+        {
+            ["document"] = new JsonObject(), ["pages"] = new JsonArray(), ["items"] = new JsonArray(),
+            ["typography"] = new JsonObject
+            {
+                ["inspectedParagraphs"] = 12, ["totalParagraphs"] = 12, ["truncated"] = false,
+                ["styles"] = new JsonArray(
+                    new JsonObject { ["id"] = 5, ["name"] = "Texte", ["paragraphs"] = 8, ["overridden"] = 2, ["pointSizes"] = new JsonArray(9.5, 10), ["leadings"] = new JsonArray(12, "auto"), ["storyIds"] = new JsonArray(40), ["overriddenStoryIds"] = new JsonArray(40) },
+                    new JsonObject { ["id"] = 6, ["name"] = "Titre", ["paragraphs"] = 2, ["overridden"] = 0, ["pointSizes"] = new JsonArray(24), ["leadings"] = new JsonArray(28), ["storyIds"] = new JsonArray(41) }),
+                ["unstyled"] = new JsonObject { ["paragraphs"] = 2, ["storyIds"] = new JsonArray(42) },
+                ["tightLeading"] = new JsonObject { ["paragraphs"] = 1, ["storyIds"] = new JsonArray(41) },
+            },
+        };
+        var lint = LayoutWorkflow.Lint(snapshot, []);
+        var issues = ((JsonArray)lint["issues"]!).OfType<JsonObject>().ToList();
+        var codes = issues.Select(issue => Json.Str(issue, "code")).ToList();
+        Assert.Equal(["STYLE_OVERRIDE", "INCONSISTENT_POINT_SIZE", "INCONSISTENT_LEADING", "UNSTYLED_TEXT", "LEADING_TIGHTER_THAN_SIZE"], codes);
+        Assert.All(issues, issue => Assert.Equal("warning", Json.Str(issue, "severity")));
+        Assert.Equal("Texte", Json.Str(issues[0], "style"));
+        Assert.True(Json.IsTrue(lint, "passed"));
+    }
+
+    [Theory]
+    [InlineData("Titre   de\nla une", "Nexus : Titre de la une")]
+    [InlineData("", "Nexus : script")]
+    public void The_undo_step_is_named_after_the_reason(string reason, string expected) =>
+        Assert.Equal(expected, SilentBridge.UndoName(reason));
 }
