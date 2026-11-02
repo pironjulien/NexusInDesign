@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.1] - 2026-11-02
+
+### Fixed
+- Use valid YAML for the InDesign skill description without changing its text or instructions.
+
 ## [4.1.0] - 2026-10-31
 
 ### Added

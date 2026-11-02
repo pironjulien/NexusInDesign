@@ -75,7 +75,7 @@ only. See [SECURITY.md](SECURITY.md) for the trust boundary and the safeguards.
 
 ```powershell
 .\test.ps1
-pwsh -File tools/package.ps1 -Version 4.1.0
+pwsh -File tools/package.ps1 -Version 4.1.1
 ```
 
 `test.ps1` runs the xUnit suite against an emulated InDesign (no InDesign needed). Every push to `main` builds and
