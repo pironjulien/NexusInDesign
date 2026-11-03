@@ -430,25 +430,10 @@
             12
           ],
           "type": "array",
-          "prefixItems": [
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            }
-          ],
-          "items": false,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
           "minItems": 4,
           "maxItems": 4
         },
@@ -460,25 +445,10 @@
             3
           ],
           "type": "array",
-          "prefixItems": [
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "number",
-              "minimum": 0
-            }
-          ],
-          "items": false,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
           "minItems": 4,
           "maxItems": 4
         },

@@ -68,6 +68,36 @@ public sealed class ProtocolTests
     }
 
     [Fact]
+    public void Public_argument_shapes_are_explicit_and_creation_arrays_remain_numeric()
+    {
+        var tools = ToolCatalog.Shared;
+        foreach (string name in new[] { "run_layout_script", "export_png" })
+        {
+            var tool = tools.Find(name)!;
+            var schema = tool.Public["inputSchema"]!;
+            Assert.Equal("object", Json.Str(schema, "type"));
+            Assert.NotNull(schema["properties"]!["documentId"]);
+            Assert.Null(schema["allOf"]);
+            Assert.NotNull(tool.InputSchema["allOf"]); // Conditional checks still run on the server.
+        }
+        var create = tools.Find("create_document")!;
+        foreach (string name in new[] { "margins", "bleed" })
+        {
+            var array = create.Public["inputSchema"]!["properties"]![name]!;
+            Assert.Equal("number", Json.Str(array["items"], "type"));
+            Assert.Equal(4, Json.Long(array, "minItems"));
+            Assert.Equal(4, Json.Long(array, "maxItems"));
+            foreach (var invalid in new[] { "[1,2,3]", "[1,2,3,4,5]", "[1,2,-1,4]", "[\"1\",2,3,4]" })
+            {
+                var args = new JsonObject { ["expectedRevision"] = 0, ["width"] = 100, ["height"] = 100, [name] = JsonNode.Parse(invalid) };
+                Assert.NotNull(ToolCatalog.Validate(create, args));
+            }
+        }
+        Assert.Null(ToolCatalog.Validate(create, new JsonObject { ["expectedRevision"] = 0, ["width"] = 100, ["height"] = 100,
+            ["margins"] = new JsonArray(1, 2, 3, 4), ["bleed"] = new JsonArray(0, 0, 0, 0) }));
+    }
+
+    [Fact]
     public async Task Doctor_reports_a_silent_channel_without_any_network_listener()
     {
         using var sandbox = new Sandbox();

@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.2] - 2026-11-03
+
+### Fixed
+- MCP clients receive numeric item schemas for document margins and bleed instead of homogeneous tuples that
+  could be misread as strings. All four nonnegative values remain mandatory.
+- Public script and PNG-export argument schemas expose their object properties directly. Conditional combinations
+  remain validated with the complete server schema, including the requirement to save before closing.
+- Creating an INDD in a missing parent folder fails before reaching InDesign, without leaving an unsaved document
+  or a durable mutation lease that would require reconciliation.
+
 ## [4.1.1] - 2026-11-02
 
 ### Fixed

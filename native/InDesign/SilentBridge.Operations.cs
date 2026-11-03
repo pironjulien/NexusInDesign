@@ -527,6 +527,8 @@ internal sealed partial class SilentBridge
             if (!Path.IsPathFullyQualified(savePath) || savePath.Contains('\0', StringComparison.Ordinal) || !Path.GetExtension(savePath).Equals(".indd", StringComparison.OrdinalIgnoreCase))
                 throw Fail("CREATE_PATH_INVALID", "Le chemin d’enregistrement du nouveau document doit être un fichier INDD absolu.");
             if (File.Exists(savePath) || Directory.Exists(savePath)) throw Fail("TARGET_EXISTS", "Un fichier existe déjà à cet emplacement ; la création n’écrase rien.");
+            if (!Directory.Exists(Path.GetDirectoryName(savePath)))
+                throw Fail("CREATE_PATH_PARENT_NOT_FOUND", "Le dossier d’enregistrement doit exister avant de créer le document ; aucun document n’a été créé.");
         }
         string operationId = Json.NewId();
         var inputs = new Inputs()

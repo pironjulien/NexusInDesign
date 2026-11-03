@@ -253,6 +253,22 @@ public sealed class SilentFlowTests
     }
 
     [Fact]
+    public async Task Create_to_a_missing_folder_fails_before_any_InDesign_mutation()
+    {
+        using var sandbox = new Sandbox();
+        var response = await sandbox.Call("create_document", new JsonObject { ["expectedRevision"] = 0,
+            ["width"] = 100, ["height"] = 100, ["path"] = sandbox.Path("absent/neuf.indd") });
+        Assert.True(Json.IsTrue(response, "isError"));
+        var result = response["structuredContent"]!;
+        Assert.Equal("CREATE_PATH_PARENT_NOT_FOUND", Json.Str(result, "code"));
+        Assert.Equal("not_done", Json.Str(result, "outcome"));
+        Assert.True(Json.IsTrue(result, "retry_safe"));
+        Assert.Empty(sandbox.InDesign.Runs);
+        Assert.Empty(sandbox.InDesign.Documents);
+        Assert.False(File.Exists(sandbox.App.Bridge!.LeasePath));
+    }
+
+    [Fact]
     public async Task Restore_backup_replaces_the_document_and_keeps_a_recovery_copy()
     {
         using var sandbox = new Sandbox();

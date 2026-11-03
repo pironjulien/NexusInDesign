@@ -43,6 +43,10 @@ internal sealed class ToolCatalog
                 ["inputSchema"] = schema.DeepClone(),
                 ["annotations"] = node["annotations"]?.DeepClone(),
             };
+            // MCP clients can discard the whole argument shape when a top-level allOf contains conditional checks.
+            // These clauses only constrain combinations of the explicit properties above. Keep enforcing
+            // them with the complete server schema, while advertising the ordinary object to clients.
+            ((JsonObject)visible["inputSchema"]!).Remove("allOf");
             var compiled = JsonSchema.FromText(schema.ToJsonString(), baseUri: new Uri($"urn:nexus-indesign:tool:{name}"));
             byName[name] = new ToolContract(name, visible, schema, meta["route"]?.GetValue<string>() ?? "silent",
                 meta["mutatesDocument"]?.GetValue<bool>() == true, node["annotations"]?["destructiveHint"]?.GetValue<bool>() == true, rules, compiled);
