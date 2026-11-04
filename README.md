@@ -23,10 +23,6 @@ automation: every change checked, every document backed up first, every export v
 
 </div>
 
-<div align="center">
-<a href="https://julienpiron.fr/nexusindesign/"><img src="https://julienpiron.fr/nexusindesign/assets/nexusindesign-social.png" width="820" alt="NexusInDesign: InDesign, driven by your AIs"></a>
-</div>
-
 ## ✨ Why NexusInDesign
 
 <table>
