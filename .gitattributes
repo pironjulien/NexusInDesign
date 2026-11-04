@@ -2,3 +2,6 @@
 * text=auto eol=lf
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# Byte-exact: official Adobe DOM index, pinned by SHA-256 in native/Discovery/DomIndex.cs.
+native/reference/indesign-dom-paths.xml -text
