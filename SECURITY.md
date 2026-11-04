@@ -41,7 +41,7 @@ document text, a path, code or a secret.
 - Every open document is backed up (`saveACopy`, INDD signature and SHA-256 recorded in a provenance file) before any
   mutation; a restore checks that provenance and backs up the current state first.
 - Every mutation holds a durable lease (`.mutation-lease.json`) and the Windows mutex `Local\NexusInDesignAutomation`,
-  owned by the engine's COM thread for the whole operation and shared with every Nexus InDesign tool of the session.
+  owned by the engine's COM thread for the whole operation and shared with every NexusInDesign tool of the session.
   A mutex left abandoned refuses the next command once.
 - An unknown outcome (timeout, crash) keeps the lease, the script and its result file: every InDesign command is then
   refused until `silent_reconcile_unknown_operation` proves the documents stable, backs them up and records a receipt.

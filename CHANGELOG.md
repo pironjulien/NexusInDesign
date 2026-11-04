@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.5] - 2026-11-04
+
+### Changed
+- Remaining mentions of the product (skill description seen by the AIs, `SECURITY.md`, a code comment) written NexusInDesign, without a space.
+
 ## [4.1.4] - 2026-11-04
 
 ### Changed

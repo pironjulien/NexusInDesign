@@ -39,7 +39,7 @@ internal interface IInDesignHost
 
 /// <summary>
 /// InDesign through its COM automation server, in this process: no PowerShell, no panel, no network. Every call runs on
-/// one STA thread that owns the named mutex Local\NexusInDesignAutomation (shared with every Nexus InDesign tool on this
+/// one STA thread that owns the named mutex Local\NexusInDesignAutomation (shared with every NexusInDesign tool on this
 /// session), so a Windows mutex, which belongs to a thread, is acquired and released by the same thread. A call that
 /// exceeds its delay leaves its thread to finish (and release the mutex) on its own; the next call gets a new thread.
 /// </summary>
