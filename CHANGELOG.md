@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Same `.gitattributes` as every Nexus repository (2026-11-04): LF in Git and on disk, CRLF only for `.cmd`/`.bat`; files stored with CRLF were renormalized once. `CLAUDE.md` imports `AGENTS.md`, so Claude reads the same project rules as Codex and Antigravity.
+
 ## [4.1.2] - 2026-11-03
 
 ### Fixed
