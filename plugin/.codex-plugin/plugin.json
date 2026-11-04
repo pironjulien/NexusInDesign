@@ -1,6 +1,6 @@
 {
   "name": "nexus-indesign",
-  "version": "4.1.3",
+  "version": "4.1.4",
   "description": "Adobe InDesign for Claude Code and Codex through its COM automation only (no panel, no UXP plugin, no network): open, script, preview, preflight and export, every change backed up and checked. Starts the native NexusInDesign engine installed by NexusSystem (or NexusInDesign's get.ps1).",
   "author": {
     "name": "Julien Piron",
@@ -19,7 +19,7 @@
   "mcpServers": "./.codex-mcp.json",
   "skills": "./skills/",
   "interface": {
-    "displayName": "Nexus InDesign",
+    "displayName": "NexusInDesign",
     "shortDescription": "Create with scripts, verify in InDesign",
     "longDescription": "A studio workflow for Adobe InDesign 2024 to 2026: reproducible UXP scripts to create and edit documents, then local MCP tools to inspect, preflight, render and verify the final result. Driven through COM only, every change backed up first.",
     "developerName": "Julien Piron",

@@ -1,4 +1,4 @@
-title = "Nexus InDesign"
+title = "NexusInDesign"
 
 [allowlist]
 description = "Jetons d'état hexadécimaux déterministes utilisés uniquement par le test de signature croisée"

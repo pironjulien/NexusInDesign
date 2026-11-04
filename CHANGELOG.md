@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.4] - 2026-11-04
+
+### Changed
+- Display name written NexusInDesign, without a space, like the repository and the NexusSystem catalog.
+
 ## [4.1.3] - 2026-11-04
 
 ### Changed
