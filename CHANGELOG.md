@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.1.3] - 2026-11-04
+
 ### Changed
+- Product icon now shows the julienpiron.fr medallion on a transparent background at every size (no dark square), with the knot badge at the bottom of the ring kept whole.
 - Same `.gitattributes` as every Nexus repository (2026-11-04): LF in Git and on disk, CRLF only for `.cmd`/`.bat`; files stored with CRLF were renormalized once. `CLAUDE.md` imports `AGENTS.md`, so Claude reads the same project rules as Codex and Antigravity.
 - `native/reference/indesign-dom-paths.xml` is stored byte-exact (`-text`, CRLF as published by Adobe) so its pinned SHA-256 matches on every checkout; the shared `.gitattributes` had made CI check it out with LF.
 
