@@ -128,7 +128,8 @@ public sealed class EngineUnitTests : IDisposable
     [Fact]
     public void The_test_host_is_not_an_allowed_parent()
     {
-        var policy = new ParentProcessPolicy([new AllowedParent("claude.exe", "Anthropic, PBC"), new AllowedParent("codex.exe", "OpenAI")],
+        // Names no real process carries: run from Claude or Codex, the chain does hold claude.exe or codex.exe.
+        var policy = new ParentProcessPolicy([new AllowedParent("nexus-never-a-parent.exe", "Anthropic, PBC"), new AllowedParent("nexus-never-a-parent-2.exe", "OpenAI")],
             [@"C:\Program Files\WindowsApps"]);
         Assert.Equal("PARENT_NOT_ALLOWED", Assert.Throws<ToolError>(() => policy.Verify()).Code);
         var chain = ParentProcessPolicy.ParentChain(Environment.ProcessId).ToList();
