@@ -33,6 +33,23 @@ public sealed class ReleaseTests : IDisposable
     }
 
     [Fact]
+    public void Changelog_links_every_version_and_compares_unreleased_from_the_latest()
+    {
+        string text = File.ReadAllText(Repository.File("CHANGELOG.md"));
+        var versions = Regex.Matches(text, @"(?m)^## \[(\d+\.\d+\.\d+)\]").Select(match => match.Groups[1].Value).ToList();
+        Assert.NotEmpty(versions);
+        Assert.Matches($@"(?m)^\[Unreleased\]: https://github\.com/pironjulien/NexusInDesign/compare/v{Regex.Escape(versions[0])}\.\.\.HEAD\r?$", text);
+        // The first published release links to its tag; the sections before it were never tagged.
+        int first = versions.FindIndex(version => Regex.IsMatch(text, $@"(?m)^\[{Regex.Escape(version)}\]: https://github\.com/pironjulien/NexusInDesign/releases/tag/v{Regex.Escape(version)}\r?$"));
+        Assert.True(first >= 0, "The first published release must link to its tag.");
+        for (int i = 0; i < first; i++)
+        {
+            string target = Regex.Escape(versions[i]);
+            Assert.Matches($@"(?m)^\[{target}\]: https://github\.com/pironjulien/NexusInDesign/compare/v{Regex.Escape(versions[i + 1])}\.\.\.v{target}\r?$", text);
+        }
+    }
+
+    [Fact]
     public void Plugins_start_the_installed_engine_without_Node_or_a_panel()
     {
         var claude = ReadJson("plugin", ".mcp.json")["mcpServers"]!["nexus-indesign"]!;

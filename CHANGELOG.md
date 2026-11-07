@@ -207,7 +207,9 @@ listener, so NexusSystem can install it like the other Nexus products.
 ### Removed
 - The former HTTP server and declarative tests.
 
-[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.0...HEAD
+[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.2...HEAD
+[4.2.2]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.1...v4.2.2
+[4.2.1]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.0...v4.2.1
 [4.2.0]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.5...v4.2.0
 [4.1.5]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.4...v4.1.5
 [4.1.4]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.3...v4.1.4
