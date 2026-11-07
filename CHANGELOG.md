@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-11-07
+
 ### Changed
 - English by default, French on a French Windows: the MCP instructions, tool titles and descriptions
   (`native/tool-contracts.json` in English, `native/tool-contracts.fr.json` for French), results, errors and the UXP
@@ -182,7 +184,8 @@ listener, so NexusSystem can install it like the other Nexus products.
 ### Removed
 - The former HTTP server and declarative tests.
 
-[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.5...HEAD
+[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.5...v4.2.0
 [4.1.5]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.4...v4.1.5
 [4.1.4]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.3...v4.1.4
 [4.1.3]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.2...v4.1.3
