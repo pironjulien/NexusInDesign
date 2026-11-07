@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.2.1] - 2026-11-07
+
+### Fixed
+- `get.ps1` no longer fails with "being used by another process" when a scanner briefly opens the freshly copied
+  executable (the failure seen once with NexusAGYmail in NexusSystem's pack job on a fresh Windows runner). The package
+  is never run before installation: its version comes from the executable's version resource, the copy staged beside
+  `NexusInDesign.exe` is renamed into place, and only then is `--version` run from the installed file; if it does not
+  answer the expected version, the previous executable is put back. A rename held by such an external, transient scan
+  (sharing, lock or access violation) is waited out for at most 10 s; any other error still fails the installation.
+
 ## [4.2.0] - 2026-11-07
 
 ### Changed

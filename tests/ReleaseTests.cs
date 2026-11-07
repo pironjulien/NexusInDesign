@@ -80,18 +80,34 @@ public sealed class ReleaseTests : IDisposable
         return (process.ExitCode, output.Result + error.Result);
     }
 
+    // A package like a release's: one single-file NexusInDesign.exe (framework-dependent here, self-contained in a
+    // release), the only file get.ps1 installs, so it must run alone. Published once for every test of the run.
+    private static readonly Lazy<string> package = new(() =>
+    {
+        string work = Path.Combine(Path.GetTempPath(), "nexusindesign-get", "package-" + Guid.NewGuid().ToString("N"));
+        string publish = Path.Combine(work, "publish");
+        var info = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string argument in new[] { "publish", Repository.File("native", "NexusInDesign.csproj"), "-c", "Release", "-r", "win-x64",
+            "--self-contained", "false", "-p:PublishSingleFile=true", "-p:DebugType=none", $"-p:NexusBuild={Path.Combine(work, "build")}{Path.DirectorySeparatorChar}", "-o", publish, "-v", "q" })
+            info.ArgumentList.Add(argument);
+        using (var process = Process.Start(info)!)
+        {
+            var output = process.StandardOutput.ReadToEndAsync();
+            var error = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(600_000) || process.ExitCode != 0) throw new InvalidOperationException("dotnet publish failed: " + output.Result + error.Result);
+        }
+        string zip = Path.Combine(work, "NexusInDesign-win-x64.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+            archive.CreateEntryFromFile(Path.Combine(publish, "NexusInDesign.exe"), "NexusInDesign.exe");
+        return zip;
+    });
+
     [Theory]
     [InlineData("pwsh")]
     [InlineData("powershell")]
     public void Get_installs_updates_and_removes_from_a_local_package(string shell)
     {
-        Directory.CreateDirectory(root);
-        string zip = Path.Combine(root, "NexusInDesign-win-x64.zip");
-        // The engine the tests run, with what it needs next to it (framework-dependent here, self-contained in a release).
-        string engine = Path.GetDirectoryName(typeof(Program).Assembly.Location)!;
-        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
-            foreach (string file in Directory.GetFiles(engine).Where(file => !Path.GetFileName(file).StartsWith("NexusInDesign.Tests", StringComparison.OrdinalIgnoreCase)))
-                archive.CreateEntryFromFile(file, Path.GetFileName(file));
+        string zip = package.Value;
         string home = Path.Combine(root, "home");
         var (code, output) = Get(shell, zip, home);
         Assert.True(code == 0, output);
@@ -103,5 +119,59 @@ public sealed class ReleaseTests : IDisposable
         (code, output) = Get(shell, zip, home, "-Remove");
         Assert.True(code == 0, output);
         Assert.False(File.Exists(Path.Combine(home, "NexusInDesign.exe")));
+    }
+
+    [Theory]
+    [InlineData("pwsh", false)]
+    [InlineData("powershell", false)]
+    [InlineData("pwsh", true)]
+    [InlineData("powershell", true)]
+    public void A_scanner_briefly_holding_the_fresh_copy_does_not_fail_the_installation(string shell, bool update)
+    {
+        // What an antivirus does to a freshly written executable: opens it for a moment. Without delete sharing that
+        // blocks renaming it into place; get.ps1 waits that hold out instead of failing ("being used by another
+        // process", seen once with NexusAGYmail in NexusSystem's pack job on a fresh Windows runner).
+        string zip = package.Value;
+        string home = Path.Combine(root, "home");
+        if (update)
+        {
+            var first = Get(shell, zip, home);
+            Assert.True(first.Code == 0, first.Output);
+        }
+        else Directory.CreateDirectory(home);
+
+        string? held = null;
+        bool stagedWhileHeld = false;
+        using var released = new ManualResetEventSlim();
+        using var watcher = new FileSystemWatcher(home, "NexusInDesign.exe.new-*");
+        var scanner = new Thread(() =>
+        {
+            string path = watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change ? Path.Combine(home, change.Name!) : "";
+            var deadline = Stopwatch.StartNew();
+            while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && File.Exists(path))
+            {
+                try
+                {
+                    using var scan = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    held = path;
+                    Thread.Sleep(2_000);
+                    stagedWhileHeld = File.Exists(path);
+                }
+                catch (IOException) { Thread.Yield(); }  // still being copied
+                catch (UnauthorizedAccessException) { Thread.Yield(); }
+            }
+            released.Set();
+        }) { IsBackground = true };
+        watcher.EnableRaisingEvents = true;
+        scanner.Start();
+
+        var (code, output) = Get(shell, zip, home);
+        Assert.True(released.Wait(60_000, TestContext.Current.CancellationToken));
+        Assert.True(code == 0, output);
+        Assert.NotNull(held);
+        Assert.True(stagedWhileHeld, "the hold must have overlapped the staged copy");
+        string stable = Path.Combine(home, "NexusInDesign.exe");
+        Assert.Equal(Program.Version, FileVersionInfo.GetVersionInfo(stable).ProductVersion!.Split('+')[0]);
+        Assert.Empty(Directory.GetFiles(home, "NexusInDesign.exe.new-*"));
     }
 }

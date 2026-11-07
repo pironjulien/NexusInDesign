@@ -67,20 +67,55 @@ function Get-ExpectedHash([byte[]]$Manifest, [string]$Name) {
     return $expected
 }
 
+function Invoke-WhileHeld([string]$Staged, [scriptblock]$Action) {
+    # Renaming the freshly copied executable fails while another process holds it open without delete sharing. This
+    # installer never runs or keeps open the staged copy, but antivirus and indexing services open freshly written
+    # executables for a moment to scan them ("being used by another process", seen once with NexusAGYmail on a fresh
+    # GitHub Windows runner). Only that external, transient hold (sharing, lock or access violation while the staged
+    # copy is still there) is waited out, at most 10 s; any other error, or a longer hold, fails.
+    $transient = 0x80070020, 0x80070021, 0x80070005  # ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION, ERROR_ACCESS_DENIED
+    for ($attempt = 1; ; $attempt++) {
+        try { & $Action; return }
+        catch {
+            $failure = $_.Exception
+            while ($failure.InnerException -and $failure -is [Management.Automation.MethodInvocationException]) { $failure = $failure.InnerException }
+            $held = ($failure -is [IO.IOException] -or $failure -is [UnauthorizedAccessException]) -and
+                ($transient -contains $failure.HResult) -and (Test-Path -LiteralPath $Staged)
+            if (-not $held -or $attempt -ge 40) { throw "Cannot install $Staged as $($Stable): $($failure.Message)" }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+}
+
 # A running EXE cannot be overwritten but can be renamed: the new one replaces it, the running copy becomes
-# NexusInDesign.exe.old-<id>, removed by a later run once its session has ended.
+# NexusInDesign.exe.old-<id>, removed by a later run once its session has ended. Returns that copy's path (empty for a
+# first installation), so a new executable that does not run can be taken back.
 function Update-Stable([string]$Source) {
     New-Item -ItemType Directory -Force -Path $Root | Out-Null
     $staged = Join-Path $Root ('NexusInDesign.exe.new-' + [guid]::NewGuid().ToString('N'))
+    $backup = ''
     Copy-Item -LiteralPath $Source -Destination $staged
     try {
         if (Test-Path -LiteralPath $Stable) {
-            [IO.File]::Replace($staged, $Stable, (Join-Path $Root ('NexusInDesign.exe.old-' + [guid]::NewGuid().ToString('N'))))
+            $backup = Join-Path $Root ('NexusInDesign.exe.old-' + [guid]::NewGuid().ToString('N'))
+            Invoke-WhileHeld $staged { [IO.File]::Replace($staged, $Stable, $backup) }
         } else {
-            [IO.File]::Move($staged, $Stable)
+            Invoke-WhileHeld $staged { [IO.File]::Move($staged, $Stable) }
         }
     } finally {
         Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
+    }
+    return $backup
+}
+
+# The new executable did not run: the previous one goes back in place (a running session keeps its own copy), or, on a
+# first installation, the new one is removed.
+function Undo-Stable([string]$Backup) {
+    if ($Backup -and (Test-Path -LiteralPath $Backup)) {
+        $failed = Join-Path $Root ('NexusInDesign.exe.old-' + [guid]::NewGuid().ToString('N'))
+        Invoke-WhileHeld $Backup { [IO.File]::Replace($Backup, $Stable, $failed) }
+    } else {
+        Remove-Item -LiteralPath $Stable -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -114,9 +149,17 @@ function Install-NexusInDesign {
         $exe = Join-Path $unpacked 'NexusInDesign.exe'
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Not a NexusInDesign package.' }
         Get-ChildItem -LiteralPath $unpacked -Recurse -File | Unblock-File
-        $version = ((& $exe --version) -replace '^NexusInDesign\s+', '').Trim()
-        if ($LASTEXITCODE -or $version -notmatch '^\d+\.\d+\.\d+$') { throw "The package does not run on this PC ($Arch)." }
-        Update-Stable $exe
+        # The version from the executable's version resource, without running it: a program just run is what scanners
+        # open right after, when its copy has to be renamed into place.
+        $version = "$((Get-Item -LiteralPath $exe).VersionInfo.ProductVersion)".Split('+')[0].Trim()
+        if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Not a NexusInDesign package (no version).' }
+        $backup = Update-Stable $exe
+        # Run once in place: the package must start on this PC's architecture and report the version it carries.
+        $answer = ((& $Stable --version) -replace '^NexusInDesign\s+', '').Trim()
+        if ($LASTEXITCODE -or $answer -ne $version) {
+            Undo-Stable $backup
+            throw "The package does not run on this PC ($Arch)."
+        }
         Remove-Leftovers
         Say "NexusInDesign $version is in $Root." Green
         if (-not $Pack) {
