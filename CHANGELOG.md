@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Strict build: recommended .NET analyzers, code style enforced, warnings as errors (`.editorconfig` added).
 - JsonSchema.Net 9.6.0.
 - Release workflow on NexusSystem's shared workflows v1.6.54, pinned by commit SHA.
+- CodeQL runs from `.github/workflows/codeql.yml` (actions, C#, JavaScript/TypeScript, default queries) instead of the
+  default setup, so OpenSSF Scorecard credits SAST for commits pushed without pull requests.
 - CHANGELOG compare links for every released version.
 
 ## [4.1.5] - 2026-11-04
