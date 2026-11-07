@@ -3,6 +3,8 @@ const { app } = indesign;
 const uxp = require("uxp");
 const fs = require("fs");
 @@STATE_FUNCTION@@
+const __fr = @@FRENCH@@;
+function __t(english, french) { return __fr ? french : english; }
 const __resultPath = @@resultPath@@;
 const __operationId = @@operationId@@;
 async function __writeResult(value) {
@@ -17,7 +19,7 @@ async function __writeResult(value) {
     else if (code >= 55296 && code <= 56319 && index + 1 < serialized.length && serialized.charCodeAt(index + 1) >= 56320 && serialized.charCodeAt(index + 1) <= 57343) { byteLength += 4; index += 1; }
     else byteLength += 3;
   }
-  if (byteLength > @@maxResultBytes@@) serialized = JSON.stringify({ ok: false, code: "RESULT_TOO_LARGE_AFTER_MUTATION", message: "Le résultat dépasse la limite MCP; relisez le document.", operationId: __operationId, requiresInspection: true });
+  if (byteLength > @@maxResultBytes@@) serialized = JSON.stringify({ ok: false, code: "RESULT_TOO_LARGE_AFTER_MUTATION", message: __t("The result exceeds the MCP limit; read the document again.", "Le résultat dépasse la limite MCP; relisez le document."), operationId: __operationId, requiresInspection: true });
   await fs.writeFile(__resultPath, serialized, { encoding: "utf8" });
 }
 try {

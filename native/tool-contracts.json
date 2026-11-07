@@ -1,8 +1,8 @@
 [
   {
     "name": "analyze_layout",
-    "title": "Analyser la mise en page",
-    "description": "Analyse sans modification la géométrie, les ressources, les styles, la typographie (remplacements locaux, texte sans style, corps et interlignages incohérents) et les écarts à un contrat de mise en page; renvoie une empreinte stable réutilisable.",
+    "title": "Analyze the layout",
+    "description": "Analyzes, without changing anything, the geometry, resources, styles, typography (local overrides, unstyled text, inconsistent point sizes and leadings) and deviations from a layout contract; returns a stable, reusable fingerprint.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -174,7 +174,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Analyser la mise en page",
+      "title": "Analyze the layout",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -188,8 +188,8 @@
   },
   {
     "name": "compare_layout_snapshot",
-    "title": "Comparer une empreinte de mise en page",
-    "description": "Recalcule l’empreinte de mise en page et la compare à une empreinte de référence pour contrôler un aller-retour.",
+    "title": "Compare a layout fingerprint",
+    "description": "Computes the layout fingerprint again and compares it with a reference fingerprint to check a round trip.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -366,7 +366,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Comparer une empreinte de mise en page",
+      "title": "Compare a layout fingerprint",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -380,8 +380,8 @@
   },
   {
     "name": "create_document",
-    "title": "Créer un document",
-    "description": "Crée un document InDesign avec dimensions, marges et fond perdu explicites ; renvoie documentId, revision et stateToken. Avec path, l’enregistre aussitôt en INDD (sans écrasement) pour que run_layout_script puisse ensuite enregistrer avec save=true.",
+    "title": "Create a document",
+    "description": "Creates an InDesign document with explicit dimensions, margins and bleed; returns documentId, revision and stateToken. With path, saves it at once as INDD (never overwriting) so that run_layout_script can then save with save=true.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -469,7 +469,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Créer un document",
+      "title": "Create a document",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -493,8 +493,8 @@
   },
   {
     "name": "create_working_copy",
-    "title": "Créer une copie de travail",
-    "description": "Crée et ouvre silencieusement une copie INDD de travail depuis une sauvegarde vérifiée, puis prouve que le document source est resté inchangé.",
+    "title": "Create a working copy",
+    "description": "Silently creates and opens a working INDD copy from a verified backup, then proves that the source document stayed unchanged.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -536,7 +536,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Créer une copie de travail",
+      "title": "Create a working copy",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -560,8 +560,8 @@
   },
   {
     "name": "execute_uxp_silent",
-    "title": "Exécuter UXP silencieusement",
-    "description": "Exécute du JavaScript UXP synchrone ou asynchrone sans panneau. Contrôle revision et stateToken et sauvegarde tous les documents ouverts. UXP ne garantit pas une annulation atomique; utilisez silent_restore_backup. Ce code libre peut accéder aux fichiers et au réseau.",
+    "title": "Run UXP silently",
+    "description": "Runs synchronous or asynchronous UXP JavaScript without a panel. Checks revision and stateToken and backs up every open document. UXP does not guarantee an atomic undo; use silent_restore_backup. This free code can reach files and the network.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -577,7 +577,7 @@
         "expectedStateToken": {
           "type": "string",
           "pattern": "^[a-f0-9]{16}$",
-          "description": "Jeton renvoyé par silent_inspect_document juste avant la modification."
+          "description": "Token returned by silent_inspect_document just before the change."
         },
         "reason": {
           "type": "string",
@@ -600,7 +600,7 @@
       ]
     },
     "annotations": {
-      "title": "UXP silencieux",
+      "title": "Silent UXP",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -614,8 +614,8 @@
   },
   {
     "name": "export_idml",
-    "title": "Exporter l’IDML",
-    "description": "Exporte le document en IDML vers un chemin autorisé, sans boîte de dialogue, puis vérifie la structure du paquet produit.",
+    "title": "Export IDML",
+    "description": "Exports the document as IDML to an allowed path, without a dialog, then checks the structure of the package produced.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -657,7 +657,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Exporter l’IDML",
+      "title": "Export IDML",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -681,8 +681,8 @@
   },
   {
     "name": "export_pdf",
-    "title": "Exporter le PDF",
-    "description": "Exporte un PDF vers un fichier autorisé à la révision demandée.",
+    "title": "Export PDF",
+    "description": "Exports a PDF to an allowed file at the requested revision.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -729,7 +729,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Exporter le PDF",
+      "title": "Export PDF",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -753,8 +753,8 @@
   },
   {
     "name": "export_png",
-    "title": "Exporter le PNG",
-    "description": "Exporte une page vers filePath, ou plusieurs pages vers folderPath, sans ambiguïté de cible.",
+    "title": "Export PNG",
+    "description": "Exports one page to filePath, or several pages to folderPath, with no ambiguity about the target.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -865,7 +865,7 @@
       ]
     },
     "annotations": {
-      "title": "Exporter le PNG",
+      "title": "Export PNG",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -895,8 +895,8 @@
   },
   {
     "name": "finalize_layout",
-    "title": "Finaliser la mise en page",
-    "description": "Exécute le diagnostic contractuel et le contrôle Adobe, puis exporte un PDF vérifié uniquement si aucun écart bloquant n’est détecté.",
+    "title": "Finalize the layout",
+    "description": "Runs the contract diagnosis and the Adobe preflight, then exports a verified PDF only when no blocking deviation is found.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1111,7 +1111,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Finaliser la mise en page",
+      "title": "Finalize the layout",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -1135,8 +1135,8 @@
   },
   {
     "name": "get_document_info",
-    "title": "Inspecter le document",
-    "description": "Lit silencieusement les propriétés du document et sa révision courante.",
+    "title": "Inspect the document",
+    "description": "Silently reads the document properties and its current revision.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1152,7 +1152,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Inspecter le document",
+      "title": "Inspect the document",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1166,8 +1166,8 @@
   },
   {
     "name": "get_fonts",
-    "title": "Contrôler les polices",
-    "description": "Liste silencieusement les polices utilisées et signale celles manquantes.",
+    "title": "Check fonts",
+    "description": "Silently lists the fonts used and reports the missing ones.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1183,7 +1183,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Contrôler les polices",
+      "title": "Check fonts",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1197,8 +1197,8 @@
   },
   {
     "name": "get_images",
-    "title": "Inspecter les images",
-    "description": "Liste silencieusement les images avec lien, format et résolution effective.",
+    "title": "Inspect images",
+    "description": "Silently lists the images with link, format and effective resolution.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1214,7 +1214,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Inspecter les images",
+      "title": "Inspect images",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1228,8 +1228,8 @@
   },
   {
     "name": "get_links",
-    "title": "Contrôler les liens",
-    "description": "Liste silencieusement les liens, statuts, chemins et résolutions effectives.",
+    "title": "Check links",
+    "description": "Silently lists the links, statuses, paths and effective resolutions.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1245,7 +1245,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Contrôler les liens",
+      "title": "Check links",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1259,8 +1259,8 @@
   },
   {
     "name": "get_overset_text",
-    "title": "Détecter les débordements",
-    "description": "Détecte silencieusement les blocs de texte en débordement.",
+    "title": "Detect overset text",
+    "description": "Silently detects the text frames with overset text.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1276,7 +1276,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Détecter les débordements",
+      "title": "Detect overset text",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1290,8 +1290,8 @@
   },
   {
     "name": "indesign_doctor",
-    "title": "Diagnostiquer les capacités disponibles",
-    "description": "Vérifie localement le runtime, le stockage privé, les deux canaux et l’intégrité du registre sans démarrer ni contacter InDesign. Peut inclure le détail compact de chaque outil.",
+    "title": "Diagnose the available capabilities",
+    "description": "Checks locally the runtime, the private storage, both channels and the registry integrity without starting or contacting InDesign. Can include the compact detail of each tool.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1299,12 +1299,12 @@
         "includeTools": {
           "type": "boolean",
           "default": false,
-          "description": "Inclut le nom, la route, les indicateurs de sécurité et l’empreinte de schéma de chaque outil."
+          "description": "Includes the name, route, safety flags and schema hash of each tool."
         }
       }
     },
     "annotations": {
-      "title": "Doctor InDesign",
+      "title": "InDesign doctor",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1318,8 +1318,8 @@
   },
   {
     "name": "list_pages",
-    "title": "Lister les pages",
-    "description": "Liste silencieusement les pages et leurs identifiants.",
+    "title": "List pages",
+    "description": "Silently lists the pages and their ids.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1335,7 +1335,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Lister les pages",
+      "title": "List pages",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1349,8 +1349,8 @@
   },
   {
     "name": "open_document",
-    "title": "Ouvrir un document",
-    "description": "Ouvre silencieusement un fichier INDD ou IDML autorisé ; renvoie documentId, revision et stateToken.",
+    "title": "Open a document",
+    "description": "Silently opens an allowed INDD or IDML file; returns documentId, revision and stateToken.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1369,7 +1369,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Ouvrir un document",
+      "title": "Open a document",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -1394,8 +1394,8 @@
   },
   {
     "name": "package_document",
-    "title": "Assembler le document",
-    "description": "Crée un assemblage InDesign dans un dossier autorisé.",
+    "title": "Package the document",
+    "description": "Creates an InDesign package in an allowed folder.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1477,7 +1477,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Assembler le document",
+      "title": "Package the document",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -1498,8 +1498,8 @@
   },
   {
     "name": "preflight_document",
-    "title": "Contrôler le document",
-    "description": "Exécute silencieusement le contrôle prépresse et retourne les erreurs structurées sans modifier le document.",
+    "title": "Preflight the document",
+    "description": "Silently runs the prepress preflight and returns the structured errors without changing the document.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1527,7 +1527,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Contrôler le document",
+      "title": "Preflight the document",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -1541,8 +1541,8 @@
   },
   {
     "name": "preview_layout",
-    "title": "Prévisualiser la mise en page",
-    "description": "Produit un aperçu PNG multipage vérifié (vignettes jointes à la réponse), annoté sur demande depuis une copie cachée, et joint le diagnostic de mise en page correspondant.",
+    "title": "Preview the layout",
+    "description": "Produces a verified multipage PNG preview (thumbnails attached to the answer), annotated on request from a hidden copy, and attaches the matching layout diagnosis.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1586,7 +1586,7 @@
         "annotate": {
           "default": false,
           "type": "boolean",
-          "description": "Rend l’aperçu depuis une copie cachée annotée (identifiants des blocs, marges, colonnes, texte en excès en rouge) ; le document source reste inchangé."
+          "description": "Renders the preview from a hidden annotated copy (frame ids, margins, columns, overset text in red); the source document stays unchanged."
         },
         "maxItems": {
           "default": 20000,
@@ -1765,7 +1765,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Prévisualiser la mise en page",
+      "title": "Preview the layout",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -1786,8 +1786,8 @@
   },
   {
     "name": "run_layout_script",
-    "title": "Script de mise en page rapide",
-    "description": "Voie normale pour modifier un document : en un seul passage InDesign, contrôle revision et stateToken, sauvegarde tous les documents ouverts (restaurables par silent_restore_backup), exécute le code UXP (app, indesign, doc, input ; return pour renvoyer une valeur), enregistre si save=true, exporte un aperçu PNG relu (vignette jointe à la réponse), puis ferme si close=true (avec save=true). Les modifications faites avant le premier await forment une seule étape d’annulation InDesign nommée « Nexus : <reason> ». Renvoie la nouvelle revision et le nouveau stateToken : enchaînez les appels sans réinspecter. Un échec du script renvoie scriptOk=false, l’erreur, l’aperçu et backupId, sans bloquer la suite. Ce code libre peut accéder aux fichiers et au réseau.",
+    "title": "Quick layout script",
+    "description": "The normal way to change a document: in a single InDesign pass, checks revision and stateToken, backs up every open document (restorable with silent_restore_backup), runs the UXP code (app, indesign, doc, input; return to send back a value), saves when save=true, exports a checked PNG preview (thumbnail attached to the answer), then closes when close=true (with save=true). The changes made before the first await form a single InDesign undo step named \"Nexus: <reason>\". Returns the new revision and the new stateToken: chain calls without inspecting again. A failed script returns scriptOk=false, the error, the preview and backupId without blocking what follows. This free code can reach files and the network.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1803,7 +1803,7 @@
         "expectedStateToken": {
           "type": "string",
           "pattern": "^[a-f0-9]{16}$",
-          "description": "Jeton renvoyé par open_document, silent_inspect_document ou l’appel précédent."
+          "description": "Token returned by open_document, silent_inspect_document or the previous call."
         },
         "reason": {
           "type": "string",
@@ -1819,18 +1819,18 @@
         "save": {
           "type": "boolean",
           "default": false,
-          "description": "Enregistre le document après un script réussi."
+          "description": "Saves the document after a successful script."
         },
         "close": {
           "type": "boolean",
           "default": false,
-          "description": "Ferme le document après enregistrement et aperçu ; exige save=true."
+          "description": "Closes the document after saving and previewing; needs save=true."
         },
         "previewPages": {
           "type": "string",
           "minLength": 1,
           "maxLength": 128,
-          "description": "Pages à rendre (noms InDesign, ex. \"1\" ou \"2-3\") ; première page par défaut."
+          "description": "Pages to render (InDesign names, e.g. \"1\" or \"2-3\"); the first page by default."
         },
         "previewResolution": {
           "type": "integer",
@@ -1872,7 +1872,7 @@
       ]
     },
     "annotations": {
-      "title": "Script rapide",
+      "title": "Quick script",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -1886,8 +1886,8 @@
   },
   {
     "name": "save_as",
-    "title": "Enregistrer sous",
-    "description": "Enregistre le document sous un nouveau chemin INDD autorisé (copie de sécurité de la cible existante si overwrite=true) après contrôle de revision et stateToken et sauvegarde de tous les documents ouverts.",
+    "title": "Save as",
+    "description": "Saves the document to a new allowed INDD path (safety copy of the existing target when overwrite=true) after checking revision and stateToken and backing up every open document.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1929,7 +1929,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Enregistrer sous",
+      "title": "Save as",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -1953,8 +1953,8 @@
   },
   {
     "name": "save_document",
-    "title": "Enregistrer le document",
-    "description": "Enregistre le document à son emplacement actuel après contrôle de revision et stateToken et sauvegarde de tous les documents ouverts ; renvoie le nouveau stateToken. Un document jamais enregistré exige save_as.",
+    "title": "Save the document",
+    "description": "Saves the document at its current location after checking revision and stateToken and backing up every open document; returns the new stateToken. A document never saved needs save_as.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1987,7 +1987,7 @@
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Enregistrer le document",
+      "title": "Save the document",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": true,
@@ -2001,8 +2001,8 @@
   },
   {
     "name": "search_official_dom",
-    "title": "Rechercher dans le DOM officiel Adobe",
-    "description": "Recherche hors ligne une classe ou une énumération dans l’index DOM officiel Adobe épinglé et renvoie les liens de référence exacts.",
+    "title": "Search the official Adobe DOM",
+    "description": "Searches offline for a class or an enumeration in the pinned official Adobe DOM index and returns the exact reference links.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2024,7 +2024,7 @@
       ]
     },
     "annotations": {
-      "title": "Référence DOM officielle",
+      "title": "Official DOM reference",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -2038,8 +2038,8 @@
   },
   {
     "name": "silent_audit_document",
-    "title": "Auditer entièrement un document sans panneau",
-    "description": "Lit en un seul appel structuré les pages, objets, liens, polices, images, débordements et styles. La réponse signale explicitement toute troncature liée au nombre d’objets ou à la limite de résultat.",
+    "title": "Fully audit a document without a panel",
+    "description": "Reads in a single structured call the pages, items, links, fonts, images, overset text and styles. The answer explicitly reports any truncation due to the item count or the result limit.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2060,7 +2060,7 @@
       ]
     },
     "annotations": {
-      "title": "Audit silencieux complet",
+      "title": "Full silent audit",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -2074,8 +2074,8 @@
   },
   {
     "name": "silent_close_document",
-    "title": "Fermer sans enregistrer et sans panneau",
-    "description": "Ferme uniquement le document identifié avec save=false, après contrôle exact de revision et stateToken. N’enregistre pas et ne crée aucune copie du document.",
+    "title": "Close without saving and without a panel",
+    "description": "Closes only the identified document with save=false, after an exact check of revision and stateToken. Does not save and makes no copy of the document.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2110,7 +2110,7 @@
       ]
     },
     "annotations": {
-      "title": "Fermer sans enregistrer",
+      "title": "Close without saving",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -2124,8 +2124,8 @@
   },
   {
     "name": "silent_inspect_document",
-    "title": "Inspecter un document sans panneau",
-    "description": "Lit les propriétés essentielles, la révision et le stateToken du contenu réel. Réutilisez revision et stateToken pour toute écriture silencieuse.",
+    "title": "Inspect a document without a panel",
+    "description": "Reads the essential properties, the revision and the stateToken of the real content. Reuse revision and stateToken for any silent write.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2140,7 +2140,7 @@
       ]
     },
     "annotations": {
-      "title": "Inspection silencieuse",
+      "title": "Silent inspection",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -2154,15 +2154,15 @@
   },
   {
     "name": "silent_list_documents",
-    "title": "Lister les documents sans panneau",
-    "description": "Liste les documents ouverts et leurs révisions par le canal local silencieux.",
+    "title": "List documents without a panel",
+    "description": "Lists the open documents and their revisions through the local silent channel.",
     "inputSchema": {
       "type": "object",
       "properties": {},
       "additionalProperties": false
     },
     "annotations": {
-      "title": "Documents silencieux",
+      "title": "Silent documents",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -2176,8 +2176,8 @@
   },
   {
     "name": "silent_operation_status",
-    "title": "Réconcilier une opération silencieuse",
-    "description": "Relit le résultat privé d’une opération dont le délai a expiré. Un résultat absent ou en attente impose toujours de réinspecter le document.",
+    "title": "Reconcile a silent operation",
+    "description": "Reads the private result of an operation that timed out. A missing or pending result always means inspecting the document again.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2192,7 +2192,7 @@
       ]
     },
     "annotations": {
-      "title": "État d’une opération silencieuse",
+      "title": "Silent operation status",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -2206,8 +2206,8 @@
   },
   {
     "name": "silent_reconcile_unknown_operation",
-    "title": "Sécuriser puis acquitter une issue inconnue",
-    "description": "Après un arrêt ou une déconnexion, vérifie qu’InDesign est stable et non modal, sauvegarde tous les documents, conserve une preuve privée puis libère le verrou orphelin. Ne déduit jamais un faux succès.",
+    "title": "Secure, then acknowledge an unknown outcome",
+    "description": "After a crash or a disconnection, checks that InDesign is stable and not modal, backs up every document, keeps a private evidence, then releases the orphaned lock. Never infers a false success.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2228,7 +2228,7 @@
       ]
     },
     "annotations": {
-      "title": "Acquitter une issue inconnue",
+      "title": "Acknowledge an unknown outcome",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -2242,8 +2242,8 @@
   },
   {
     "name": "silent_restore_backup",
-    "title": "Restaurer une copie silencieuse",
-    "description": "Restaure une copie INDD vérifiée créée par le canal silencieux. Sauvegarde d’abord tous les documents ouverts, puis remplace sans enregistrer le document ciblé. Exige revision et stateToken relus juste avant.",
+    "title": "Restore a silent copy",
+    "description": "Restores a verified INDD copy created by the silent channel. First backs up every open document, then replaces the target document without saving it. Needs revision and stateToken read just before.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2279,7 +2279,7 @@
       ]
     },
     "annotations": {
-      "title": "Restaurer une copie silencieuse",
+      "title": "Restore a silent copy",
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
@@ -2293,15 +2293,15 @@
   },
   {
     "name": "silent_status",
-    "title": "Tester InDesign sans panneau",
-    "description": "Interroge directement InDesign 19 à 21 par COM et UXP, sans panneau, clic, réseau ni Computer Use.",
+    "title": "Test InDesign without a panel",
+    "description": "Queries InDesign 19 to 21 directly through COM and UXP, without a panel, click, network or Computer Use.",
     "inputSchema": {
       "type": "object",
       "properties": {},
       "additionalProperties": false
     },
     "annotations": {
-      "title": "État silencieux",
+      "title": "Silent status",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,

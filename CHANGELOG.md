@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- English by default, French on a French Windows: the MCP instructions, tool titles and descriptions
+  (`native/tool-contracts.json` in English, `native/tool-contracts.fr.json` for French), results, errors and the UXP
+  scripts' own messages follow the Windows display language. The doctor's registry hash stays language-neutral.
+- Build output path taken from the .NET user profile instead of `$(USERPROFILE)`, which is unset on Dependabot's Linux
+  runner (NuGet restores silently failed on `/.nexus`).
 - Strict build: recommended .NET analyzers, code style enforced, warnings as errors (`.editorconfig` added).
 - JsonSchema.Net 9.6.0.
 - Release workflow on NexusSystem's shared workflows v1.6.54, pinned by commit SHA.

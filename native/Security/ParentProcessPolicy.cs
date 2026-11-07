@@ -26,8 +26,8 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
 {
     public JsonObject Verify()
     {
-        if (allowed.Count == 0) throw new ToolError("PARENT_POLICY_INVALID", "Aucun agent autorisé n’est configuré.");
-        if (allowedPaths.Count == 0) throw new ToolError("PARENT_POLICY_INVALID", "Aucun dossier d’agent autorisé n’est configuré.");
+        if (allowed.Count == 0) throw new ToolError("PARENT_POLICY_INVALID", Strings.T("No allowed agent is configured.", "Aucun agent autorisé n’est configuré."));
+        if (allowedPaths.Count == 0) throw new ToolError("PARENT_POLICY_INVALID", Strings.T("No allowed agent folder is configured.", "Aucun dossier d’agent autorisé n’est configuré."));
         foreach (var process in ParentChain(parentProcessId ?? ParentOf(Environment.ProcessId) ?? 0))
         {
             if (process.ExecutablePath is not { } path) continue;
@@ -39,7 +39,7 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
             if (!candidates.Any(entry => subject.Contains(entry.Signer, StringComparison.OrdinalIgnoreCase))) continue;
             return new JsonObject { ["verified"] = true, ["processId"] = process.ProcessId, ["executablePath"] = path, ["signerSubject"] = subject };
         }
-        throw new ToolError("PARENT_NOT_ALLOWED", "Démarrage refusé : aucun ancêtre Claude ou Codex signé ne correspond à la liste autorisée.");
+        throw new ToolError("PARENT_NOT_ALLOWED", Strings.T("Start refused: no signed Claude or Codex ancestor matches the allowed list.", "Démarrage refusé : aucun ancêtre Claude ou Codex signé ne correspond à la liste autorisée."));
     }
 
     /// <summary>Ancestors from the parent upwards; a parent started after its child (PID reuse) ends the chain.</summary>

@@ -100,7 +100,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         if (run.Hold is Hold hold && !hold.Disposed)
         {
             if (hold.Owner.Poisoned)
-                throw new ToolError("INDESIGN_CALL_STUCK", "Un appel InDesign précédent de cette opération ne s’est pas terminé ; l’issue doit être vérifiée.", true);
+                throw new ToolError("INDESIGN_CALL_STUCK", Strings.T("A previous InDesign call of this operation did not finish; its outcome must be checked.", "Un appel InDesign précédent de cette opération ne s’est pas terminé ; l’issue doit être vérifiée."), true);
             return await Execute(hold.Owner, run, mutexHeld: true).ConfigureAwait(false);
         }
         await gate.WaitAsync().ConfigureAwait(false);
@@ -140,8 +140,8 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         {
             Poison(owner);
             throw run.CompletionPath is null
-                ? new ToolError("COM_TIMEOUT_OUTCOME_UNKNOWN", "InDesign n’a pas terminé l’appel COM dans le délai ; l’issue peut être indéterminée.", true)
-                : new ToolError("UXP_OUTCOME_UNKNOWN", "Le délai UXP est dépassé ; l’issue peut être indéterminée. Inspectez le document avant toute nouvelle action.", true);
+                ? new ToolError("COM_TIMEOUT_OUTCOME_UNKNOWN", Strings.T("InDesign did not finish the COM call in time; the outcome may be unknown.", "InDesign n’a pas terminé l’appel COM dans le délai ; l’issue peut être indéterminée."), true)
+                : new ToolError("UXP_OUTCOME_UNKNOWN", Strings.T("The UXP timeout expired; the outcome may be unknown. Inspect the document before any new action.", "Le délai UXP est dépassé ; l’issue peut être indéterminée. Inspectez le document avant toute nouvelle action."), true);
         }
     }
 
@@ -182,7 +182,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         {
             bool unknown = run.CompletionPath is not null || outcomeKnown;
             throw new ToolError(run.CompletionPath is not null ? "UXP_OUTCOME_UNKNOWN" : "INDESIGN_COM_FAILED",
-                $"L’appel COM InDesign a échoué : {operationError.Message}", unknown, operationError);
+                Strings.T($"The InDesign COM call failed: {operationError.Message}", $"L’appel COM InDesign a échoué : {operationError.Message}"), unknown, operationError);
         }
         return result;
     }
@@ -198,7 +198,8 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
             catch (Exception exception) { last = exception; }
         }
         throw new ToolError("INDESIGN_NOT_REGISTERED",
-            $"Aucune version InDesign compatible (2024 à 2026) n’est enregistrée pour COM.{(last is null ? "" : " " + last.Message)}");
+            Strings.T("No compatible InDesign version (2024 to 2026) is registered for COM.", "Aucune version InDesign compatible (2024 à 2026) n’est enregistrée pour COM.")
+            + (last is null ? "" : " " + last.Message));
     }
 
     internal static object? Invoke(object target, string method, params object[] args) =>
@@ -222,7 +223,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
                 catch (Exception exception) when (exception is IOException or System.Text.Json.JsonException) { }
             }
             if (DateTime.UtcNow >= deadline)
-                throw new ToolError("UXP_OUTCOME_UNKNOWN", "Le délai du résultat UXP asynchrone est dépassé ; issue indéterminée.", true);
+                throw new ToolError("UXP_OUTCOME_UNKNOWN", Strings.T("The asynchronous UXP result timed out; outcome unknown.", "Le délai du résultat UXP asynchrone est dépassé ; issue indéterminée."), true);
             Thread.Sleep(25);
         }
         var quiet = DateTime.UtcNow + TimeSpan.FromMilliseconds(Math.Min(timeout.TotalMilliseconds, 30_000));
@@ -233,7 +234,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
             catch (Exception exception) when (exception is COMException or TargetInvocationException) { modal = true; }
             if (!modal) return;
             if (DateTime.UtcNow >= quiet)
-                throw new ToolError("UXP_OUTCOME_UNKNOWN", "InDesign reste en état modal après le résultat UXP ; issue indéterminée.", true);
+                throw new ToolError("UXP_OUTCOME_UNKNOWN", Strings.T("InDesign stays modal after the UXP result; outcome unknown.", "InDesign reste en état modal après le résultat UXP ; issue indéterminée."), true);
             Thread.Sleep(25);
         }
     }
@@ -268,7 +269,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
             try { Invoke(application, "Quit"); }
             catch (Exception exception) when (exception is COMException or TargetInvocationException)
             {
-                throw new ToolError("INDESIGN_HOST_QUIT_FAILED", "InDesign n’a pas accepté la fermeture de son hôte COM.", false, exception);
+                throw new ToolError("INDESIGN_HOST_QUIT_FAILED", Strings.T("InDesign did not accept closing its COM host.", "InDesign n’a pas accepté la fermeture de son hôte COM."), false, exception);
             }
             var deadline = DateTime.UtcNow.AddSeconds(10);
             while (DateTime.UtcNow < deadline)
@@ -276,12 +277,12 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
                 if (!SnapshotProcesses().Any(process => process.ProcessId == target.ProcessId && process.StartedAtUtc == target.StartedAtUtc)) return;
                 Thread.Sleep(50);
             }
-            throw new ToolError("INDESIGN_HOST_EXIT_UNCONFIRMED", "Le processus InDesign créé par cet appel reste actif ; aucune terminaison forcée n’a été tentée.");
+            throw new ToolError("INDESIGN_HOST_EXIT_UNCONFIRMED", Strings.T("The InDesign process created by this call is still running; no forced termination was attempted.", "Le processus InDesign créé par cet appel reste actif ; aucune terminaison forcée n’a été tentée."));
         }
         try { Invoke(application, "Activate"); }
         catch (Exception exception) when (exception is COMException or TargetInvocationException)
         {
-            throw new ToolError("INDESIGN_HOST_ACTIVATION_FAILED", "InDesign n’a pas accepté son activation visible.", false, exception);
+            throw new ToolError("INDESIGN_HOST_ACTIVATION_FAILED", Strings.T("InDesign did not accept its visible activation.", "InDesign n’a pas accepté son activation visible."), false, exception);
         }
     }
 
@@ -374,7 +375,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
             }
             catch (InvalidOperationException)
             {
-                throw new ToolError("INDESIGN_CALL_STUCK", "Le fil d’exécution InDesign est arrêté après un appel resté sans réponse.", true);
+                throw new ToolError("INDESIGN_CALL_STUCK", Strings.T("The InDesign thread is stopped after a call that never answered.", "Le fil d’exécution InDesign est arrêté après un appel resté sans réponse."), true);
             }
             return WithBudget(completion.Task, budget);
         }
@@ -399,9 +400,9 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
                 // The previous holder ended without releasing it: its InDesign outcome is unknown. The mutex is now
                 // ours; release it and refuse, so the caller checks before going on.
                 mutex.ReleaseMutex();
-                throw new ToolError("INDESIGN_MUTEX_ABANDONED", "Le mutex commun InDesign a été abandonné ; la commande précédente doit être vérifiée avant de recommencer.", true);
+                throw new ToolError("INDESIGN_MUTEX_ABANDONED", Strings.T("The shared InDesign mutex was abandoned; the previous command must be checked before trying again.", "Le mutex commun InDesign a été abandonné ; la commande précédente doit être vérifiée avant de recommencer."), true);
             }
-            if (!acquired) throw new ToolError("INDESIGN_QUEUE_TIMEOUT", "Le délai de la file InDesign inter-processus est dépassé (une autre commande InDesign est en cours).");
+            if (!acquired) throw new ToolError("INDESIGN_QUEUE_TIMEOUT", Strings.T("The cross-process InDesign queue timed out (another InDesign command is running).", "Le délai de la file InDesign inter-processus est dépassé (une autre commande InDesign est en cours)."));
             owned = true;
         }
 

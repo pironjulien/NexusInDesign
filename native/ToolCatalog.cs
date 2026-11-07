@@ -6,12 +6,15 @@ using Json.Schema;
 namespace NexusInDesign;
 
 /// <summary>A tool contract: what the agent sees (name, schema, annotations) and how the engine routes it.</summary>
-internal sealed record ToolContract(string Name, JsonObject Public, JsonObject InputSchema, string Route, bool MutatesDocument, bool Destructive,
-    IReadOnlyList<PathRule> PathRules, JsonSchema Schema);
+internal sealed record ToolContract(string Name, JsonObject Public, JsonObject PublicFrench, JsonObject InputSchema, string Route,
+    bool MutatesDocument, bool Destructive, IReadOnlyList<PathRule> PathRules, JsonSchema Schema);
 
 internal sealed record PathRule(string Field, string Access, IReadOnlyList<string> Extensions, string Kind, bool MustNotExist);
 
-/// <summary>The 32 tools of the core profile, from the embedded tool-contracts.json, with JSON Schema 2020-12 checks.</summary>
+/// <summary>
+/// The 32 tools of the core profile, from the embedded tool-contracts.json (English), with JSON Schema 2020-12 checks.
+/// tool-contracts.fr.json maps each English title and description to its French text, shown on a French Windows.
+/// </summary>
 internal sealed class ToolCatalog
 {
     private readonly Dictionary<string, ToolContract> byName = new(StringComparer.Ordinal);
@@ -24,6 +27,10 @@ internal sealed class ToolCatalog
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("tool-contracts.json")
             ?? throw new InvalidOperationException("Tool contracts missing.");
+        using var frenchStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("tool-contracts.fr.json")
+            ?? throw new InvalidOperationException("French tool texts missing.");
+        French = JsonSerializer.Deserialize<Dictionary<string, string>>(frenchStream)
+            ?? throw new InvalidOperationException("French tool texts unreadable.");
         foreach (var node in JsonNode.Parse(stream)!.AsArray().OfType<JsonObject>())
         {
             string name = node["name"]!.GetValue<string>();
@@ -48,7 +55,7 @@ internal sealed class ToolCatalog
             // them with the complete server schema, while advertising the ordinary object to clients.
             ((JsonObject)visible["inputSchema"]!).Remove("allOf");
             var compiled = JsonSchema.FromText(schema.ToJsonString(), baseUri: new Uri($"urn:nexus-indesign:tool:{name}"));
-            byName[name] = new ToolContract(name, visible, schema, meta["route"]?.GetValue<string>() ?? "silent",
+            byName[name] = new ToolContract(name, visible, Translate(visible), schema, meta["route"]?.GetValue<string>() ?? "silent",
                 meta["mutatesDocument"]?.GetValue<bool>() == true, node["annotations"]?["destructiveHint"]?.GetValue<bool>() == true, rules, compiled);
         }
     }
@@ -57,7 +64,31 @@ internal sealed class ToolCatalog
 
     public ToolContract? Find(string name) => byName.GetValueOrDefault(name);
 
-    public JsonArray PublicList() => Json.Array(byName.Values.OrderBy(tool => tool.Name, StringComparer.Ordinal).Select(tool => (JsonNode)tool.Public));
+    /// <summary>English title or description to its French text.</summary>
+    internal IReadOnlyDictionary<string, string> French { get; }
+
+    /// <summary>What tools/list shows, in the engine's language; the doctor hashes the English list (language-neutral).</summary>
+    public JsonArray PublicList(bool french) => Json.Array(byName.Values.OrderBy(tool => tool.Name, StringComparer.Ordinal)
+        .Select(tool => (JsonNode)(french ? tool.PublicFrench : tool.Public)));
+
+    /// <summary>A copy of a visible contract with every title and description in French (English kept when unmapped).</summary>
+    private JsonObject Translate(JsonObject visible)
+    {
+        var copy = (JsonObject)visible.DeepClone();
+        void Walk(JsonNode? node)
+        {
+            if (node is JsonArray array) foreach (var item in array) Walk(item);
+            if (node is not JsonObject obj) return;
+            foreach (var (key, value) in obj.ToList())
+            {
+                if (key is "title" or "description" && value is JsonValue text && text.TryGetValue(out string? english))
+                    obj[key] = French.TryGetValue(english, out var french) ? french : english;
+                else Walk(value);
+            }
+        }
+        Walk(copy);
+        return copy;
+    }
 
     /// <summary>Defaults of the properties, at every level of an object that is present (as Ajv useDefaults does).</summary>
     private static void ApplyDefaults(JsonObject schema, JsonObject instance)

@@ -1,10 +1,10 @@
 <Project>
   <!-- Tests (xUnit v3, run by test.ps1): every build and test output goes to ~\.nexus\build\nexusindesign\test, never
-       into OneDrive or AppData. -->
+       into OneDrive or AppData. The user profile comes from .NET, not $(USERPROFILE), which is unset on Linux (Dependabot). -->
   <PropertyGroup>
-    <NexusBuild Condition="'$(NexusBuild)' == ''">$(USERPROFILE)\.nexus\build\nexusindesign\</NexusBuild>
-    <BaseOutputPath>$(NexusBuild)test\bin\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(NexusBuild)test\obj\</BaseIntermediateOutputPath>
+    <NexusBuild Condition="'$(NexusBuild)' == ''">$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), '.nexus', 'build', 'nexusindesign'))))</NexusBuild>
+    <BaseOutputPath>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine('$(NexusBuild)', 'test', 'bin'))))</BaseOutputPath>
+    <BaseIntermediateOutputPath>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine('$(NexusBuild)', 'test', 'obj'))))</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
   </PropertyGroup>
   <!-- Strict build: the recommended .NET analyzers and the code style rules of .editorconfig, every warning an error. -->

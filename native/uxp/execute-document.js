@@ -1,22 +1,22 @@
-  if (app.modalState) { const error = new Error("InDesign affiche une boîte de dialogue modale"); error.code = "INDESIGN_MODAL"; throw error; }
+  if (app.modalState) { const error = new Error(__t("InDesign shows a modal dialog", "InDesign affiche une boîte de dialogue modale")); error.code = "INDESIGN_MODAL"; throw error; }
   const wanted = @@documentId@@;
   const expectedRevision = @@expectedRevision@@;
   const expectedStateToken = @@expectedStateToken@@;
   const expectedDocuments = @@expectedDocuments@@;
-  if (app.documents.length !== expectedDocuments.length) { const error = new Error("L’inventaire des documents a changé"); error.code = "DOCUMENT_INVENTORY_CONFLICT"; throw error; }
+  if (app.documents.length !== expectedDocuments.length) { const error = new Error(__t("The document inventory changed", "L’inventaire des documents a changé")); error.code = "DOCUMENT_INVENTORY_CONFLICT"; throw error; }
   let targetDocument = null;
   for (let index = 0; index < app.documents.length; index += 1) {
     const candidate = app.documents.item(index);
     const expected = expectedDocuments.find((entry) => Number(entry.documentId) === Number(candidate.id));
     const actual = Number.parseInt(candidate.extractLabel("fr.pironjulien.indesign.mcp.revision") || "0", 10) || 0;
-    if (!expected || actual !== Number(expected.revision) || documentStateToken(candidate) !== expected.stateToken) { const error = new Error("Un document a changé après les sauvegardes"); error.code = "DOCUMENT_STATE_CONFLICT"; throw error; }
+    if (!expected || actual !== Number(expected.revision) || documentStateToken(candidate) !== expected.stateToken) { const error = new Error(__t("A document changed after the backups", "Un document a changé après les sauvegardes")); error.code = "DOCUMENT_STATE_CONFLICT"; throw error; }
     if (Number(candidate.id) === wanted) targetDocument = candidate;
   }
-  if (!targetDocument) { const error = new Error("Document introuvable"); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
+  if (!targetDocument) { const error = new Error(__t("Document not found", "Document introuvable")); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
   const rawRevision = targetDocument.extractLabel("fr.pironjulien.indesign.mcp.revision");
   const actualRevision = Number.parseInt(rawRevision || "0", 10) || 0;
-  if (actualRevision !== expectedRevision) { const error = new Error("Le document a changé depuis la dernière lecture"); error.code = "REVISION_CONFLICT"; throw error; }
-  if (documentStateToken(targetDocument) !== expectedStateToken) { const error = new Error("Le document a changé depuis la dernière inspection"); error.code = "STATE_CONFLICT"; throw error; }
+  if (actualRevision !== expectedRevision) { const error = new Error(__t("The document changed since the last read", "Le document a changé depuis la dernière lecture")); error.code = "REVISION_CONFLICT"; throw error; }
+  if (documentStateToken(targetDocument) !== expectedStateToken) { const error = new Error(__t("The document changed since the last inspection", "Le document a changé depuis la dernière inspection")); error.code = "STATE_CONFLICT"; throw error; }
   const documentsBefore = [];
   for (let index = 0; index < app.documents.length; index += 1) { const current = app.documents.item(index); const raw = Number.parseInt(current.extractLabel("fr.pironjulien.indesign.mcp.revision") || "0", 10) || 0; documentsBefore.push({ doc: current, documentId: Number(current.id), revision: raw }); }
   const userInput = @@input@@;
@@ -35,7 +35,7 @@
       revisions.length = 0;
       for (const entry of documentsBefore) { try { if (entry.doc && entry.doc.isValid !== false) { const next = entry.revision + 1; entry.doc.insertLabel("fr.pironjulien.indesign.mcp.revision", String(next)); revisions.push({ documentId: entry.documentId, revision: next }); } } catch (_) {} }
     };
-    // AUTO_UNDO : les étiquettes de révision rejoignent l'étape d'annulation du script.
+    // AUTO_UNDO: the revision labels join the script's undo step.
     let labelled = false;
     if (grouped) { try { app.doScript(() => { write(); labelled = true; }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.AUTO_UNDO, undoName); } catch (_) {} }
     if (!labelled) write();
@@ -47,7 +47,7 @@
     app.scriptPreferences.enableRedraw = false;
     mutationStarted = true;
     const executeUserCode = new Function("app", "indesign", "doc", "input", '"use strict"; return (async function () {\n' + userCode + '\n}).call(null);');
-    // Une seule étape d'annulation nommée pour la partie synchrone du script (avant son premier await).
+    // One named undo step for the synchronous part of the script (before its first await).
     let pending = null;
     try { app.doScript(() => { pending = executeUserCode(app, indesign, targetDocument, userInput); }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.ENTIRE_SCRIPT, undoName); grouped = pending !== null; } catch (_) {}
     if (pending === null) pending = executeUserCode(app, indesign, targetDocument, userInput);

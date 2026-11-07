@@ -1,11 +1,11 @@
-  if (app.modalState) { const error = new Error("InDesign affiche une boîte de dialogue modale"); error.code = "INDESIGN_MODAL"; throw error; }
+  if (app.modalState) { const error = new Error(__t("InDesign shows a modal dialog", "InDesign affiche une boîte de dialogue modale")); error.code = "INDESIGN_MODAL"; throw error; }
   const spec = @@spec@@;
   const savePath = @@savePath@@;
   const openProfileDeadline = Date.now() + @@profileBudgetMs@@;
 @@PROFILE_HELPERS@@  const initialProfileDeadline = Math.min(openProfileDeadline, Date.now() + 10000);
-  const documentsBefore = await captureStableDocumentProfile("CREATE_INITIAL_PROFILE_UNSTABLE", "Le profil documentaire initial ne se stabilise pas", initialProfileDeadline);
+  const documentsBefore = await captureStableDocumentProfile("CREATE_INITIAL_PROFILE_UNSTABLE", __t("The initial document profile does not settle", "Le profil documentaire initial ne se stabilise pas"), initialProfileDeadline);
   if (documentsBefore.length > 0 && !documentsBefore.some((entry) => entry.active)) {
-    const error = new Error("Le document actif initial est introuvable"); error.code = "CREATE_ACTIVE_DOCUMENT_MISSING"; throw error;
+    const error = new Error(__t("The initial active document is missing", "Le document actif initial est introuvable")); error.code = "CREATE_ACTIVE_DOCUMENT_MISSING"; throw error;
   }
   const previousInteraction = app.scriptPreferences.userInteractionLevel;
   const previousRedraw = app.scriptPreferences.enableRedraw;
@@ -17,9 +17,9 @@
     app.scriptPreferences.enableRedraw = false;
     mutationStarted = true;
     created = await Promise.resolve(app.documents.add());
-    if (!created || created.isValid === false) { const error = new Error("InDesign n’a pas renvoyé de document valide"); error.code = "CREATE_RESULT_INVALID"; throw error; }
+    if (!created || created.isValid === false) { const error = new Error(__t("InDesign did not return a valid document", "InDesign n’a pas renvoyé de document valide")); error.code = "CREATE_RESULT_INVALID"; throw error; }
     const createdId = Number(created.id);
-    if (documentsBefore.some((entry) => entry.documentId === createdId)) { const error = new Error("Le nouveau document reprend l’identifiant d’un document ouvert"); error.code = "CREATE_INVENTORY_MISMATCH"; throw error; }
+    if (documentsBefore.some((entry) => entry.documentId === createdId)) { const error = new Error(__t("The new document reuses the id of an open document", "Le nouveau document reprend l’identifiant d’un document ouvert")); error.code = "CREATE_INVENTORY_MISMATCH"; throw error; }
     const view = created.viewPreferences;
     const millimeters = indesign.MeasurementUnits.MILLIMETERS !== undefined ? indesign.MeasurementUnits.MILLIMETERS : indesign.MeasurementUnits.millimeters;
     const previousUnits = [view.horizontalMeasurementUnits, view.verticalMeasurementUnits];
@@ -64,16 +64,16 @@
     const near = (left, right) => Math.abs(left - right) < 0.01;
     if (!near(geometry.width, spec.width) || !near(geometry.height, spec.height) || geometry.pages !== spec.pageCount
       || geometry.facingPages !== spec.facingPages || !geometry.margins.every((value, index) => near(value, spec.margins[index]))) {
-      const error = new Error("La géométrie relue ne correspond pas à la demande"); error.code = "CREATE_GEOMETRY_MISMATCH"; throw error;
+      const error = new Error(__t("The geometry read back does not match the request", "La géométrie relue ne correspond pas à la demande")); error.code = "CREATE_GEOMETRY_MISMATCH"; throw error;
     }
     created.insertLabel("fr.pironjulien.indesign.mcp.revision", "0");
     if (savePath) await Promise.resolve(created.save(savePath));
     await bringDocumentToFront(created, "CREATE_FOCUS_SWITCH_FAILED");
-    if (app.documents.length !== documentsBefore.length + 1) { const error = new Error("L’inventaire des documents ouverts est inattendu"); error.code = "CREATE_INVENTORY_MISMATCH"; throw error; }
-    const createdProfile = await captureStableDocumentProfile("CREATE_PROFILE_UNSTABLE", "Le profil documentaire après création ne se stabilise pas", openProfileDeadline);
+    if (app.documents.length !== documentsBefore.length + 1) { const error = new Error(__t("The open document inventory is unexpected", "L’inventaire des documents ouverts est inattendu")); error.code = "CREATE_INVENTORY_MISMATCH"; throw error; }
+    const createdProfile = await captureStableDocumentProfile("CREATE_PROFILE_UNSTABLE", __t("The document profile after creation does not settle", "Le profil documentaire après création ne se stabilise pas"), openProfileDeadline);
     const beforeIds = new Set(documentsBefore.map((entry) => entry.documentId));
-    assertFocusOnlyTransition(documentsBefore, createdProfile.filter((entry) => beforeIds.has(entry.documentId)), "CREATE_EXISTING_DOCUMENT_CHANGED", "Un document déjà ouvert a changé pendant la création");
-    if (!createdProfile.some((entry) => entry.documentId === createdId && entry.active)) { const error = new Error("Le nouveau document n’est pas le document actif"); error.code = "CREATE_FOCUS_SWITCH_FAILED"; throw error; }
+    assertFocusOnlyTransition(documentsBefore, createdProfile.filter((entry) => beforeIds.has(entry.documentId)), "CREATE_EXISTING_DOCUMENT_CHANGED", __t("An already open document changed during creation", "Un document déjà ouvert a changé pendant la création"));
+    if (!createdProfile.some((entry) => entry.documentId === createdId && entry.active)) { const error = new Error(__t("The new document is not the active document", "Le nouveau document n’est pas le document actif")); error.code = "CREATE_FOCUS_SWITCH_FAILED"; throw error; }
     outcome = {
       ok: true,
       success: true,

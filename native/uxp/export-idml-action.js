@@ -1,5 +1,5 @@
   const idmlFormat = indesign.ExportFormat && (indesign.ExportFormat.INDESIGN_MARKUP !== undefined ? indesign.ExportFormat.INDESIGN_MARKUP : indesign.ExportFormat.indesignMarkup);
-  if (idmlFormat === undefined) { const error = new Error("L’API d’export IDML est indisponible"); error.code = "INDESIGN_API_UNAVAILABLE"; throw error; }
+  if (idmlFormat === undefined) { const error = new Error(__t("The IDML export API is unavailable", "L’API d’export IDML est indisponible")); error.code = "INDESIGN_API_UNAVAILABLE"; throw error; }
   try {
     exportStarted = true;
     await targetDocument.exportFile(idmlFormat, @@filePath@@, false);

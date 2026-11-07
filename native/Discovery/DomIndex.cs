@@ -47,30 +47,30 @@ internal static partial class DomIndex
     private static (List<Entry>, string) Parse()
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("indesign-dom-paths.xml")
-            ?? throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe est absent du moteur.");
+            ?? throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The Adobe DOM index is missing from the engine.", "L’index DOM Adobe est absent du moteur."));
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         byte[] bytes = memory.ToArray();
         if (Convert.ToHexStringLower(SHA256.HashData(bytes)) != SourceSha256)
-            throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe embarqué ne correspond pas à son empreinte officielle épinglée.");
+            throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The embedded Adobe DOM index does not match its pinned official hash.", "L’index DOM Adobe embarqué ne correspond pas à son empreinte officielle épinglée."));
         var entries = new List<Entry>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (Match match in UrlEntry().Matches(Encoding.UTF8.GetString(bytes)))
         {
             var url = new Uri(WebUtility.HtmlDecode(match.Groups[1].Value));
             if (url.Scheme != "https" || url.Host != "developer.adobe.com" || url.UserInfo.Length > 0 || url.Query.Length > 0 || url.Fragment.Length > 0)
-                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe contient une URL hors du domaine officiel autorisé.");
+                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The Adobe DOM index contains a URL outside the allowed official domain.", "L’index DOM Adobe contient une URL hors du domaine officiel autorisé."));
             var parts = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             bool prefix = parts.Length >= 3 && parts[0] == "indesign" && parts[1] == "dom" && parts[2] == "api";
             if (prefix && (parts.Length == 3 || (parts.Length == 4 && parts[3].Length == 1))) continue;
             if (parts.Length != 5 || !prefix || parts[3].Length != 1)
-                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe contient un chemin inattendu.");
+                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The Adobe DOM index contains an unexpected path.", "L’index DOM Adobe contient un chemin inattendu."));
             string name = Uri.UnescapeDataString(parts[4]);
             if (!ClassName().IsMatch(name) || !seen.Add(name))
-                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe contient un nom invalide ou dupliqué.");
+                throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The Adobe DOM index contains an invalid or duplicate name.", "L’index DOM Adobe contient un nom invalide ou dupliqué."));
             entries.Add(new Entry(name, url.AbsoluteUri, match.Groups[2].Value, Normalize(name)));
         }
-        if (entries.Count < 1_000) throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", "L’index DOM Adobe embarqué est incomplet.");
+        if (entries.Count < 1_000) throw new ToolError("OFFICIAL_DOM_INDEX_INVALID", Strings.T("The embedded Adobe DOM index is incomplete.", "L’index DOM Adobe embarqué est incomplet."));
         entries.Sort((left, right) => string.CompareOrdinal(left.Name, right.Name));
         return (entries, entries.Max(entry => entry.LastModified) ?? "");
     }

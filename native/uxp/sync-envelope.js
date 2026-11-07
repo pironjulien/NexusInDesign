@@ -2,6 +2,8 @@ const indesign = require("indesign");
 const { app } = indesign;
 const { script } = require("uxp");
 @@STATE_FUNCTION@@
+const __fr = @@FRENCH@@;
+function __t(english, french) { return __fr ? french : english; }
 try {
 @@body@@
 } catch (error) {

@@ -47,14 +47,14 @@
         for (let index = 0; index < targetDocument.stories.length; index += 1) if (targetDocument.stories.item(index).overflows) overset += 1;
       } catch (_) {}
       if (rgb.length) findings.push(rgb.length + " image(s) RVB : " + limit([...new Set(rgb)]));
-      if (links.length) findings.push(links.length + " lien(s) à revoir : " + limit(links));
-      if (fonts.length) findings.push(fonts.length + " police(s) non installée(s) : " + limit(fonts));
-      if (overset) findings.push(overset + " bloc(s) de texte en excès");
+      if (links.length) findings.push(links.length + __t(" link(s) to review: ", " lien(s) à revoir : ") + limit(links));
+      if (fonts.length) findings.push(fonts.length + __t(" font(s) not installed: ", " police(s) non installée(s) : ") + limit(fonts));
+      if (overset) findings.push(overset + __t(" overset text frame(s)", " bloc(s) de texte en excès"));
       const error = new Error(packageOptions.ignorePreflightErrors
-        ? "InDesign n’a pas créé l’assemblage" + (findings.length ? " (" + findings.join(" ; ") + ")" : "")
-        : "InDesign refuse l’assemblage tant que ses contrôles signalent un problème : "
-          + (findings.length ? findings.join(" ; ") : "problème non identifié")
-          + ". Corrigez-le, ou repassez ignorePreflightErrors=true pour assembler malgré ces alertes.");
+        ? __t("InDesign did not create the package", "InDesign n’a pas créé l’assemblage") + (findings.length ? " (" + findings.join(" ; ") + ")" : "")
+        : __t("InDesign refuses to package while its checks report a problem: ", "InDesign refuse l’assemblage tant que ses contrôles signalent un problème : ")
+          + (findings.length ? findings.join(" ; ") : __t("unidentified problem", "problème non identifié"))
+          + __t(". Fix it, or pass ignorePreflightErrors=true to package despite these warnings.", ". Corrigez-le, ou repassez ignorePreflightErrors=true pour assembler malgré ces alertes."));
       error.code = packageOptions.ignorePreflightErrors ? "PACKAGE_FAILED" : "PACKAGE_REFUSED_BY_CHECKS";
       throw error;
     }

@@ -11,8 +11,9 @@
 1. Never commit a business document, a secret, a token or an INDD backup.
 2. Keep the safeguards: path policy, revision and `stateToken` checks, backups before any mutation, durable lease,
    audit without content.
-3. A new InDesign capability is a UXP template in `native/uxp/` plus its tool contract in `native/tool-contracts.json`;
-   its emulation in `tests/FakeInDesign.cs` and a test go with it.
+3. A new InDesign capability is a UXP template in `native/uxp/` plus its tool contract in `native/tool-contracts.json`
+   (English) with its French title and description in `native/tool-contracts.fr.json`; every engine text goes through
+   `Strings.T` (C#) or `__t` (UXP). Its emulation in `tests/FakeInDesign.cs` and a test go with it.
 4. A protocol fix starts with a test that really fails.
 
 ## Checks

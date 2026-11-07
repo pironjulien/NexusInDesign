@@ -17,12 +17,12 @@ internal static class PrivateAcl
         if (directory)
         {
             var info = new DirectoryInfo(path);
-            if (!info.Exists) throw new ToolError("PRIVATE_STORAGE_MISSING", "Le dossier privé est introuvable.");
+            if (!info.Exists) throw new ToolError("PRIVATE_STORAGE_MISSING", Strings.T("The private folder is missing.", "Le dossier privé est introuvable."));
             if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", "Un stockage privé ne peut pas être une jonction ou un lien symbolique.");
+                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", Strings.T("A private storage cannot be a junction or a symbolic link.", "Un stockage privé ne peut pas être une jonction ou un lien symbolique."));
             var children = recursive ? info.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).ToList() : [];
             if (children.Any(child => child.Attributes.HasFlag(FileAttributes.ReparsePoint)))
-                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", "Une jonction ou un lien symbolique est interdit dans un stockage privé.");
+                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", Strings.T("A junction or symbolic link is forbidden inside a private storage.", "Une jonction ou un lien symbolique est interdit dans un stockage privé."));
             info.SetAccessControl(DirectoryRules(user));
             foreach (var child in children)
             {
@@ -33,9 +33,9 @@ internal static class PrivateAcl
         else
         {
             var info = new FileInfo(path);
-            if (!info.Exists) throw new ToolError("PRIVATE_STORAGE_MISSING", "Le fichier privé est introuvable.");
+            if (!info.Exists) throw new ToolError("PRIVATE_STORAGE_MISSING", Strings.T("The private file is missing.", "Le fichier privé est introuvable."));
             if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", "Un fichier privé ne peut pas être un lien.");
+                throw new ToolError("PRIVATE_STORAGE_REPARSE_POINT", Strings.T("A private file cannot be a link.", "Un fichier privé ne peut pas être un lien."));
             info.SetAccessControl(FileRules(user));
         }
     }

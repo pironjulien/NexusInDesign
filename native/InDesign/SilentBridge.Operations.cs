@@ -128,11 +128,11 @@ internal sealed partial class SilentBridge
 
     public async Task<JsonObject> AuditDocument(long documentId, long maxItems = 20_000, IReadOnlyCollection<string>? sections = null)
     {
-        if (documentId < 1) throw Fail("DOCUMENT_ID_INVALID", "Identifiant de document invalide pour l’audit silencieux.");
-        if (maxItems is < 1 or > 50_000) throw Fail("AUDIT_LIMIT_INVALID", "La limite de l’audit silencieux doit être comprise entre 1 et 50 000 objets.");
+        if (documentId < 1) throw Fail("DOCUMENT_ID_INVALID", Strings.T("Invalid document id for the silent audit.", "Identifiant de document invalide pour l’audit silencieux."));
+        if (maxItems is < 1 or > 50_000) throw Fail("AUDIT_LIMIT_INVALID", Strings.T("The silent audit limit must be between 1 and 50,000 items.", "La limite de l’audit silencieux doit être comprise entre 1 et 50 000 objets."));
         sections ??= ["all"];
         if (sections.Count == 0 || sections.Any(entry => !AuditSections.Contains(entry)))
-            throw Fail("AUDIT_SECTIONS_INVALID", "Les sections demandées pour l’audit silencieux sont invalides.");
+            throw Fail("AUDIT_SECTIONS_INVALID", Strings.T("The sections requested for the silent audit are invalid.", "Les sections demandées pour l’audit silencieux sont invalides."));
         bool all = sections.Contains("all");
         bool Has(string name) => all || sections.Contains(name);
         long budget = Math.Max(1_024, MaxResultBytes - Math.Min(16_384, MaxResultBytes / 4));
@@ -150,7 +150,7 @@ internal sealed partial class SilentBridge
             .Add("includeTypography", Has("typography"));
         var result = await RunUxpRead("audit-document.js", inputs.Render("audit-document.js"), inputs.Values).ConfigureAwait(false);
         if (result["audit"] is not JsonObject audit || Json.Long(audit, "documentId") != documentId || !Json.StateToken().IsMatch(Json.Str(audit, "stateToken") ?? ""))
-            throw Fail("AUDIT_RESULT_INVALID", "Le résultat de l’audit silencieux est invalide.");
+            throw Fail("AUDIT_RESULT_INVALID", Strings.T("The silent audit result is invalid.", "Le résultat de l’audit silencieux est invalide."));
         return audit;
     }
 
@@ -165,7 +165,7 @@ internal sealed partial class SilentBridge
             "get_overset_text" => ["overset"],
             "get_images" => ["images"],
             "analyze_layout" => ["pages", "items", "links", "fonts", "images", "designSystem", "typography"],
-            _ => throw Fail("SILENT_READ_UNKNOWN", "Lecture silencieuse inconnue."),
+            _ => throw Fail("SILENT_READ_UNKNOWN", Strings.T("Unknown silent read.", "Lecture silencieuse inconnue.")),
         };
         var audit = await AuditDocument(documentId, maxItems ?? 20_000, sections).ConfigureAwait(false);
         JsonObject Common() => new() { ["success"] = true, ["documentId"] = audit["documentId"]?.DeepClone(), ["revision"] = audit["revision"]?.DeepClone() };
@@ -263,10 +263,10 @@ internal sealed partial class SilentBridge
 
     public async Task<JsonObject> PreflightDocument(long documentId, long? expectedRevision, string? profileName, long timeoutSeconds = 60)
     {
-        if (documentId < 1) throw Fail("DOCUMENT_ID_INVALID", "Identifiant de document invalide pour le contrôle Adobe.");
-        if (expectedRevision is < 0) throw Fail("REVISION_INVALID", "La révision attendue du contrôle Adobe est invalide.");
-        if (timeoutSeconds is < 1 or > 600) throw Fail("PREFLIGHT_TIMEOUT_INVALID", "Le délai du contrôle Adobe doit être compris entre 1 et 600 secondes.");
-        if (profileName is { Length: < 1 or > 256 }) throw Fail("PREFLIGHT_PROFILE_INVALID", "Le nom du profil de contrôle Adobe est invalide.");
+        if (documentId < 1) throw Fail("DOCUMENT_ID_INVALID", Strings.T("Invalid document id for the Adobe preflight.", "Identifiant de document invalide pour le contrôle Adobe."));
+        if (expectedRevision is < 0) throw Fail("REVISION_INVALID", Strings.T("The expected revision of the Adobe preflight is invalid.", "La révision attendue du contrôle Adobe est invalide."));
+        if (timeoutSeconds is < 1 or > 600) throw Fail("PREFLIGHT_TIMEOUT_INVALID", Strings.T("The Adobe preflight timeout must be between 1 and 600 seconds.", "Le délai du contrôle Adobe doit être compris entre 1 et 600 secondes."));
+        if (profileName is { Length: < 1 or > 256 }) throw Fail("PREFLIGHT_PROFILE_INVALID", Strings.T("The Adobe preflight profile name is invalid.", "Le nom du profil de contrôle Adobe est invalide."));
         var inputs = new Inputs()
             .Add("documentId", documentId)
             .Add("profileName", profileName)
@@ -288,7 +288,7 @@ internal sealed partial class SilentBridge
             var inspected = (await InspectDocument(id).ConfigureAwait(false))["document"] as JsonObject;
             if (inspected is null || Json.Long(inspected, "documentId") != id || Json.Long(inspected, "revision") != Json.Long(document, "revision")
                 || !Json.StateToken().IsMatch(Json.Str(inspected, "stateToken") ?? ""))
-                throw Fail("DOCUMENT_SNAPSHOT_INVALID", "L’inspection stable du document a échoué.", true);
+                throw Fail("DOCUMENT_SNAPSHOT_INVALID", Strings.T("The stable inspection of the document failed.", "L’inspection stable du document a échoué."), true);
             snapshots.Add(new JsonObject { ["documentId"] = id, ["revision"] = Json.Long(inspected, "revision"), ["stateToken"] = Json.Str(inspected, "stateToken") });
         }
         return snapshots;
@@ -306,7 +306,7 @@ internal sealed partial class SilentBridge
     private static void AssertInventoryMatches(JsonArray expectedDocuments, JsonArray snapshots)
     {
         if (SnapshotKey(expectedDocuments, withToken: false) != SnapshotKey(snapshots, withToken: false))
-            throw Fail("BACKUP_SOURCE_UNSTABLE", "L’inventaire InDesign a changé avant les sauvegardes.", true);
+            throw Fail("BACKUP_SOURCE_UNSTABLE", Strings.T("The InDesign inventory changed before the backups.", "L’inventaire InDesign a changé avant les sauvegardes."), true);
     }
 
     private static JsonArray ExpectedDocuments(JsonArray safetyBackups) => Json.Array(safetyBackups.OfType<JsonObject>().Select(backup => (JsonNode)new JsonObject
@@ -335,7 +335,7 @@ internal sealed partial class SilentBridge
                 AssertStableSnapshots([document.DeepClone()], [new JsonObject
                 {
                     ["documentId"] = Json.Long(verified, "documentId"), ["revision"] = Json.Long(verified, "revision"), ["stateToken"] = Json.Str(verified, "stateToken"),
-                }], "Le document a changé pendant sa sauvegarde.");
+                }], Strings.T("The document changed during its backup.", "Le document a changé pendant sa sauvegarde."));
                 var metadata = WriteBackupMetadata(backupId, backupPath, id, revision, token);
                 safetyBackups.Add(new JsonObject
                 {
@@ -344,7 +344,7 @@ internal sealed partial class SilentBridge
                 });
             }
             var final = await SnapshotAllDocuments().ConfigureAwait(false);
-            AssertStableSnapshots(source, final, "Les documents ont changé pendant la série de sauvegardes.");
+            AssertStableSnapshots(source, final, Strings.T("The documents changed during the backup series.", "Les documents ont changé pendant la série de sauvegardes."));
         }
         catch (Exception exception)
         {
@@ -366,25 +366,25 @@ internal sealed partial class SilentBridge
         string? result = await RunScript("create-backup.jsx", ScriptLanguage.ExtendScript, source, inputs.Values).ConfigureAwait(false);
         var fields = (result ?? "").Split('|');
         if (fields[0] == "ERR")
-            throw Fail(fields.Length > 1 && fields[1].Length > 0 ? fields[1] : "BACKUP_FAILED", fields.Length > 2 ? string.Join('|', fields[2..]) : "La sauvegarde InDesign a échoué.");
-        if (fields[0] != "OK" || fields.Length != 4) throw Fail("BACKUP_RESPONSE_INVALID", "Réponse de sauvegarde InDesign invalide.");
+            throw Fail(fields.Length > 1 && fields[1].Length > 0 ? fields[1] : "BACKUP_FAILED", fields.Length > 2 ? string.Join('|', fields[2..]) : Strings.T("The InDesign backup failed.", "La sauvegarde InDesign a échoué."));
+        if (fields[0] != "OK" || fields.Length != 4) throw Fail("BACKUP_RESPONSE_INVALID", Strings.T("Invalid InDesign backup answer.", "Réponse de sauvegarde InDesign invalide."));
         if (fields[1] != backupId || fields[2] != documentId.ToString(System.Globalization.CultureInfo.InvariantCulture)
             || fields[3] != expectedRevision.ToString(System.Globalization.CultureInfo.InvariantCulture))
-            throw Fail("BACKUP_RESPONSE_MISMATCH", "La sauvegarde InDesign ne correspond pas à la requête signée localement.");
+            throw Fail("BACKUP_RESPONSE_MISMATCH", Strings.T("The InDesign backup does not match the locally signed request.", "La sauvegarde InDesign ne correspond pas à la requête signée localement."));
         ValidateBackupArtifact(backupPath);
     }
 
     private static FileInfo ValidateBackupArtifact(string backupPath)
     {
         var info = new FileInfo(backupPath);
-        if (!info.Exists) throw Fail("BACKUP_ARTIFACT_MISSING", "La copie INDD de sécurité est introuvable.");
+        if (!info.Exists) throw Fail("BACKUP_ARTIFACT_MISSING", Strings.T("The INDD safety copy is missing.", "La copie INDD de sécurité est introuvable."));
         if (info.Attributes.HasFlag(FileAttributes.ReparsePoint) || info.Length == 0)
-            throw Fail("BACKUP_ARTIFACT_INVALID", "La copie INDD de sécurité est vide ou invalide.");
+            throw Fail("BACKUP_ARTIFACT_INVALID", Strings.T("The INDD safety copy is empty or invalid.", "La copie INDD de sécurité est vide ou invalide."));
         Protect(backupPath);
         try { ArtifactVerifier.Verify(backupPath, "indd"); }
         catch (ToolError cause)
         {
-            throw new ToolError("BACKUP_ARTIFACT_INVALID", "La copie INDD de sécurité ne possède pas une structure binaire InDesign crédible.", false, cause);
+            throw new ToolError("BACKUP_ARTIFACT_INVALID", Strings.T("The INDD safety copy has no credible InDesign binary structure.", "La copie INDD de sécurité ne possède pas une structure binaire InDesign crédible."), false, cause);
         }
         info.Refresh();
         return info;
@@ -393,12 +393,12 @@ internal sealed partial class SilentBridge
     private JsonObject WriteBackupMetadata(string backupId, string backupPath, long documentId, long revision, string stateToken)
     {
         if (!Json.BackupId().IsMatch(backupId) || revision < 0 || !Json.StateToken().IsMatch(stateToken))
-            throw Fail("BACKUP_PROVENANCE_INVALID", "La provenance de la sauvegarde silencieuse est invalide.");
+            throw Fail("BACKUP_PROVENANCE_INVALID", Strings.T("The provenance of the silent backup is invalid.", "La provenance de la sauvegarde silencieuse est invalide."));
         var before = ValidateBackupArtifact(backupPath);
         string sha256 = Json.Sha256File(backupPath);
         var after = new FileInfo(backupPath);
         if (!after.Exists || after.Length != before.Length || after.LastWriteTimeUtc != before.LastWriteTimeUtc)
-            throw Fail("BACKUP_ARTIFACT_UNSTABLE", "La sauvegarde a changé pendant le calcul de son empreinte.");
+            throw Fail("BACKUP_ARTIFACT_UNSTABLE", Strings.T("The backup changed while its hash was computed.", "La sauvegarde a changé pendant le calcul de son empreinte."));
         string metadataPath = Path.Combine(BackupDirectory, $"backup-{backupId}.meta.json");
         var metadata = new JsonObject
         {
@@ -420,21 +420,21 @@ internal sealed partial class SilentBridge
     {
         string metadataPath = Path.Combine(BackupDirectory, $"backup-{backupId}.meta.json");
         var info = new FileInfo(metadataPath);
-        if (!info.Exists) throw Fail("BACKUP_METADATA_MISSING", "La provenance privée de la sauvegarde est introuvable.");
+        if (!info.Exists) throw Fail("BACKUP_METADATA_MISSING", Strings.T("The private provenance of the backup is missing.", "La provenance privée de la sauvegarde est introuvable."));
         if (info.Attributes.HasFlag(FileAttributes.ReparsePoint) || info.Length == 0 || info.Length > 16_384)
-            throw Fail("BACKUP_METADATA_INVALID", "La provenance privée de la sauvegarde est invalide.");
+            throw Fail("BACKUP_METADATA_INVALID", Strings.T("The private provenance of the backup is invalid.", "La provenance privée de la sauvegarde est invalide."));
         Protect(metadataPath);
-        var metadata = ReadSmallJson(metadataPath, 16_384) ?? throw Fail("BACKUP_METADATA_INVALID", "La provenance privée de la sauvegarde est illisible.");
+        var metadata = ReadSmallJson(metadataPath, 16_384) ?? throw Fail("BACKUP_METADATA_INVALID", Strings.T("The private provenance of the backup is unreadable.", "La provenance privée de la sauvegarde est illisible."));
         var artifact = metadata["artifact"] as JsonObject;
         bool valid = Json.Long(metadata, "schemaVersion") == BackupMetadataVersion && Json.Str(metadata, "backupId") == backupId
             && Json.Long(metadata, "documentId") == documentId && Json.Long(metadata, "revision") is >= 0
             && Json.StateToken().IsMatch(Json.Str(metadata, "stateToken") ?? "")
             && Json.Str(artifact, "fileName") == Path.GetFileName(backupPath)
             && Json.Long(artifact, "size") is > 0 && Json.Sha256Hex().IsMatch(Json.Str(artifact, "sha256") ?? "");
-        if (!valid) throw Fail("BACKUP_PROVENANCE_MISMATCH", "La sauvegarde ne correspond pas au document demandé ou sa provenance est invalide.");
+        if (!valid) throw Fail("BACKUP_PROVENANCE_MISMATCH", Strings.T("The backup does not match the requested document or its provenance is invalid.", "La sauvegarde ne correspond pas au document demandé ou sa provenance est invalide."));
         var stat = ValidateBackupArtifact(backupPath);
         if (stat.Length != Json.Long(artifact, "size") || Json.Sha256File(backupPath) != Json.Str(artifact, "sha256"))
-            throw Fail("BACKUP_INTEGRITY_FAILED", "La sauvegarde ne correspond plus à sa provenance privée.");
+            throw Fail("BACKUP_INTEGRITY_FAILED", Strings.T("The backup no longer matches its private provenance.", "La sauvegarde ne correspond plus à sa provenance privée."));
         metadata["metadataPath"] = metadataPath;
         return metadata;
     }
@@ -446,10 +446,10 @@ internal sealed partial class SilentBridge
         var documents = inventory["documents"] as JsonArray ?? [];
         var target = documents.OfType<JsonObject>().FirstOrDefault(document => Json.Long(document, "documentId") == documentId)
             ?? throw Fail("DOCUMENT_NOT_FOUND", missingMessage);
-        if (Json.Long(target, "revision") != expectedRevision) throw Fail("REVISION_CONFLICT", "Le document a changé depuis la dernière lecture.");
+        if (Json.Long(target, "revision") != expectedRevision) throw Fail("REVISION_CONFLICT", Strings.T("The document changed since the last read.", "Le document a changé depuis la dernière lecture."));
         var inspected = (await InspectDocument(documentId).ConfigureAwait(false))["document"] as JsonObject;
         if (Json.Str(inspected, "stateToken") != expectedStateToken)
-            throw Fail("STATE_CONFLICT", "Le contenu ou la structure du document a changé depuis la dernière inspection.");
+            throw Fail("STATE_CONFLICT", Strings.T("The content or structure of the document changed since the last inspection.", "Le contenu ou la structure du document a changé depuis la dernière inspection."));
         return documents;
     }
 
@@ -457,15 +457,15 @@ internal sealed partial class SilentBridge
 
     public Task<JsonObject> CloseDocument(long documentId, long expectedRevision, string expectedStateToken, bool save)
     {
-        if (save) throw Fail("SILENT_CLOSE_SAVE_FORBIDDEN", "La fermeture silencieuse interdit tout enregistrement : save doit valoir false.");
+        if (save) throw Fail("SILENT_CLOSE_SAVE_FORBIDDEN", Strings.T("The silent close forbids any save: save must be false.", "La fermeture silencieuse interdit tout enregistrement : save doit valoir false."));
         string operationId = Json.NewId();
         return WithMutationGuard(operationId, async () =>
         {
             var snapshots = await SnapshotAllDocuments().ConfigureAwait(false);
             var target = snapshots.OfType<JsonObject>().FirstOrDefault(document => Json.Long(document, "documentId") == documentId)
-                ?? throw Fail("DOCUMENT_NOT_FOUND", "Document à fermer introuvable.");
-            if (Json.Long(target, "revision") != expectedRevision) throw Fail("REVISION_CONFLICT", "Le document a changé depuis la dernière lecture.");
-            if (Json.Str(target, "stateToken") != expectedStateToken) throw Fail("STATE_CONFLICT", "Le document a changé depuis la dernière inspection.");
+                ?? throw Fail("DOCUMENT_NOT_FOUND", Strings.T("Document to close not found.", "Document à fermer introuvable."));
+            if (Json.Long(target, "revision") != expectedRevision) throw Fail("REVISION_CONFLICT", Strings.T("The document changed since the last read.", "Le document a changé depuis la dernière lecture."));
+            if (Json.Str(target, "stateToken") != expectedStateToken) throw Fail("STATE_CONFLICT", Strings.T("The document changed since the last inspection.", "Le document a changé depuis la dernière inspection."));
             var inputs = new Inputs()
                 .Add("documentId", documentId)
                 .Add("expectedRevision", expectedRevision)
@@ -485,21 +485,21 @@ internal sealed partial class SilentBridge
     public async Task<JsonObject> OpenDocument(string filePath, string? operationId = null)
     {
         if (!Path.IsPathFullyQualified(filePath) || filePath.Contains('\0', StringComparison.Ordinal))
-            throw Fail("OPEN_PATH_INVALID", "Un chemin absolu valide est requis pour ouvrir le document.");
+            throw Fail("OPEN_PATH_INVALID", Strings.T("A valid absolute path is required to open the document.", "Un chemin absolu valide est requis pour ouvrir le document."));
         string extension = Path.GetExtension(filePath).ToLowerInvariant();
         string kind = extension switch
         {
             ".indd" => "indd",
             ".idml" => "idml",
-            _ => throw Fail("OPEN_EXTENSION_UNSUPPORTED", "Seuls les fichiers INDD et IDML peuvent être ouverts silencieusement."),
+            _ => throw Fail("OPEN_EXTENSION_UNSUPPORTED", Strings.T("Only INDD and IDML files can be opened silently.", "Seuls les fichiers INDD et IDML peuvent être ouverts silencieusement.")),
         };
         var before = new FileInfo(filePath);
-        if (!before.Exists) throw Fail("OPEN_SOURCE_UNAVAILABLE", "Le document à ouvrir est introuvable ou inaccessible.");
-        if (before.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw Fail("OPEN_SOURCE_INVALID", "Le document à ouvrir doit être un fichier normal, jamais un lien.");
+        if (!before.Exists) throw Fail("OPEN_SOURCE_UNAVAILABLE", Strings.T("The document to open is missing or inaccessible.", "Le document à ouvrir est introuvable ou inaccessible."));
+        if (before.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw Fail("OPEN_SOURCE_INVALID", Strings.T("The document to open must be a regular file, never a link.", "Le document à ouvrir doit être un fichier normal, jamais un lien."));
         var verification = ArtifactVerifier.Verify(filePath, kind);
         var after = new FileInfo(filePath);
         if (!after.Exists || after.Length != before.Length || after.LastWriteTimeUtc != before.LastWriteTimeUtc)
-            throw Fail("OPEN_SOURCE_CHANGED", "Le document a changé pendant sa validation et n’a pas été envoyé à InDesign.");
+            throw Fail("OPEN_SOURCE_CHANGED", Strings.T("The document changed during its validation and was not sent to InDesign.", "Le document a changé pendant sa validation et n’a pas été envoyé à InDesign."));
         operationId ??= Json.NewId();
         var inputs = new Inputs()
             .Add("filePath", UxpTemplates.UxpPath(filePath))
@@ -521,14 +521,14 @@ internal sealed partial class SilentBridge
         var lengths = margins.Concat(bleed).Select(Mm).ToList();
         if (!double.IsFinite(Mm(width)) || Mm(width) <= 0 || !double.IsFinite(Mm(height)) || Mm(height) <= 0 || pageCount is < 1 or > 10_000
             || lengths.Count != 8 || lengths.Any(value => !double.IsFinite(value) || value < 0))
-            throw Fail("CREATE_ARGS_INVALID", "Dimensions, pages, marges ou fond perdu invalides pour la création du document.");
+            throw Fail("CREATE_ARGS_INVALID", Strings.T("Invalid dimensions, pages, margins or bleed to create the document.", "Dimensions, pages, marges ou fond perdu invalides pour la création du document."));
         if (savePath is not null)
         {
             if (!Path.IsPathFullyQualified(savePath) || savePath.Contains('\0', StringComparison.Ordinal) || !Path.GetExtension(savePath).Equals(".indd", StringComparison.OrdinalIgnoreCase))
-                throw Fail("CREATE_PATH_INVALID", "Le chemin d’enregistrement du nouveau document doit être un fichier INDD absolu.");
-            if (File.Exists(savePath) || Directory.Exists(savePath)) throw Fail("TARGET_EXISTS", "Un fichier existe déjà à cet emplacement ; la création n’écrase rien.");
+                throw Fail("CREATE_PATH_INVALID", Strings.T("The save path of the new document must be an absolute INDD file.", "Le chemin d’enregistrement du nouveau document doit être un fichier INDD absolu."));
+            if (File.Exists(savePath) || Directory.Exists(savePath)) throw Fail("TARGET_EXISTS", Strings.T("A file already exists at this location; creating never overwrites.", "Un fichier existe déjà à cet emplacement ; la création n’écrase rien."));
             if (!Directory.Exists(Path.GetDirectoryName(savePath)))
-                throw Fail("CREATE_PATH_PARENT_NOT_FOUND", "Le dossier d’enregistrement doit exister avant de créer le document ; aucun document n’a été créé.");
+                throw Fail("CREATE_PATH_PARENT_NOT_FOUND", Strings.T("The save folder must exist before the document is created; no document was created.", "Le dossier d’enregistrement doit exister avant de créer le document ; aucun document n’a été créé."));
         }
         string operationId = Json.NewId();
         var inputs = new Inputs()
@@ -574,38 +574,38 @@ internal sealed partial class SilentBridge
     public Task<JsonObject> ExportDocument(ExportRequest request, string? operationId = null)
     {
         if (request.Command is not ("export_pdf" or "export_png" or "package_document" or "export_idml"))
-            throw Fail("SILENT_EXPORT_UNKNOWN", "Type d’export silencieux inconnu.");
-        if (request.DocumentId < 1) throw Fail("DOCUMENT_ID_INVALID", "Identifiant de document invalide pour l’export silencieux.");
-        if (request.ExpectedRevision < 0) throw Fail("REVISION_INVALID", "Révision invalide pour l’export silencieux.");
-        if (!Json.StateToken().IsMatch(request.ExpectedStateToken)) throw Fail("STATE_TOKEN_REQUIRED", "Empreinte documentaire invalide pour l’export silencieux.");
+            throw Fail("SILENT_EXPORT_UNKNOWN", Strings.T("Unknown silent export type.", "Type d’export silencieux inconnu."));
+        if (request.DocumentId < 1) throw Fail("DOCUMENT_ID_INVALID", Strings.T("Invalid document id for the silent export.", "Identifiant de document invalide pour l’export silencieux."));
+        if (request.ExpectedRevision < 0) throw Fail("REVISION_INVALID", Strings.T("Invalid revision for the silent export.", "Révision invalide pour l’export silencieux."));
+        if (!Json.StateToken().IsMatch(request.ExpectedStateToken)) throw Fail("STATE_TOKEN_REQUIRED", Strings.T("Invalid document state token for the silent export.", "Empreinte documentaire invalide pour l’export silencieux."));
         switch (request.Command)
         {
             case "export_pdf":
-                if (!ValidAbsolute(request.FilePath, ".pdf")) throw Fail("EXPORT_PATH_INVALID", "Un chemin PDF absolu valide est requis.");
-                if (request.PresetName is { Length: < 1 or > 300 }) throw Fail("PDF_PRESET_INVALID", "Le nom du paramètre PDF est invalide.");
+                if (!ValidAbsolute(request.FilePath, ".pdf")) throw Fail("EXPORT_PATH_INVALID", Strings.T("A valid absolute PDF path is required.", "Un chemin PDF absolu valide est requis."));
+                if (request.PresetName is { Length: < 1 or > 300 }) throw Fail("PDF_PRESET_INVALID", Strings.T("The PDF preset name is invalid.", "Le nom du paramètre PDF est invalide."));
                 break;
             case "export_idml":
-                if (!ValidAbsolute(request.FilePath, ".idml")) throw Fail("EXPORT_PATH_INVALID", "Un chemin IDML absolu valide est requis.");
+                if (!ValidAbsolute(request.FilePath, ".idml")) throw Fail("EXPORT_PATH_INVALID", Strings.T("A valid absolute IDML path is required.", "Un chemin IDML absolu valide est requis."));
                 break;
             case "package_document":
                 if (request.FolderPath is null || !Path.IsPathFullyQualified(request.FolderPath) || request.FolderPath.Contains('\0', StringComparison.Ordinal))
-                    throw Fail("PACKAGE_TARGET_INVALID", "Un dossier d’assemblage absolu valide est requis.");
-                if (request.PdfPresetName is { Length: < 1 or > 300 }) throw Fail("PACKAGE_OPTIONS_INVALID", "Les paramètres de l’assemblage sont invalides.");
+                    throw Fail("PACKAGE_TARGET_INVALID", Strings.T("A valid absolute package folder is required.", "Un dossier d’assemblage absolu valide est requis."));
+                if (request.PdfPresetName is { Length: < 1 or > 300 }) throw Fail("PACKAGE_OPTIONS_INVALID", Strings.T("The package options are invalid.", "Les paramètres de l’assemblage sont invalides."));
                 break;
             default:
                 bool single = request.PageId is > 0;
                 if (single != ValidAbsolute(request.FilePath, ".png") || single == (request.FolderPath is not null))
-                    throw Fail("PNG_TARGET_INVALID", "L’export PNG exige soit pageId avec filePath, soit folderPath seul.");
+                    throw Fail("PNG_TARGET_INVALID", Strings.T("The PNG export needs either pageId with filePath, or folderPath alone.", "L’export PNG exige soit pageId avec filePath, soit folderPath seul."));
                 if (!single && (!Path.IsPathFullyQualified(request.FolderPath!) || request.FolderPath!.Contains('\0', StringComparison.Ordinal)))
-                    throw Fail("PNG_TARGET_INVALID", "Un dossier PNG absolu valide est requis.");
-                if (request.Resolution is < 36 or > 2400) throw Fail("PNG_RESOLUTION_INVALID", "La résolution PNG doit être comprise entre 36 et 2400 ppp.");
-                if (request.PageRange.Length is < 1 or > 128) throw Fail("PNG_OPTIONS_INVALID", "Les paramètres de l’export PNG sont invalides.");
+                    throw Fail("PNG_TARGET_INVALID", Strings.T("A valid absolute PNG folder is required.", "Un dossier PNG absolu valide est requis."));
+                if (request.Resolution is < 36 or > 2400) throw Fail("PNG_RESOLUTION_INVALID", Strings.T("The PNG resolution must be between 36 and 2400 ppi.", "La résolution PNG doit être comprise entre 36 et 2400 ppp."));
+                if (request.PageRange.Length is < 1 or > 128) throw Fail("PNG_OPTIONS_INVALID", Strings.T("The PNG export options are invalid.", "Les paramètres de l’export PNG sont invalides."));
                 break;
         }
         operationId ??= activeOperation.Value ?? Json.NewId();
         return WithMutationGuard(operationId, async () =>
         {
-            var documents = await ExpectState(request.DocumentId, request.ExpectedRevision, request.ExpectedStateToken, "Document introuvable avant l’export silencieux.").ConfigureAwait(false);
+            var documents = await ExpectState(request.DocumentId, request.ExpectedRevision, request.ExpectedStateToken, Strings.T("Document not found before the silent export.", "Document introuvable avant l’export silencieux.")).ConfigureAwait(false);
             var safetyBackups = new JsonArray();
             string? annotatedCopy = null;
             try
@@ -639,7 +639,7 @@ internal sealed partial class SilentBridge
                         if (request.Annotate)
                         {
                             string source = Json.Str(safetyBackups.OfType<JsonObject>().FirstOrDefault(backup => Json.Long(backup, "documentId") == request.DocumentId), "backupPath")
-                                ?? throw Fail("ANNOTATED_COPY_UNAVAILABLE", "La sauvegarde du document à annoter est introuvable.");
+                                ?? throw Fail("ANNOTATED_COPY_UNAVAILABLE", Strings.T("The backup of the document to annotate is missing.", "La sauvegarde du document à annoter est introuvable."));
                             annotatedCopy = Path.Combine(RuntimeDirectory, $"annotate-{operationId}.indd");
                             File.Copy(source, annotatedCopy, overwrite: false);
                         }
@@ -662,7 +662,7 @@ internal sealed partial class SilentBridge
                 inputs.Values["actionInputs"] = action.Values.DeepClone();
                 var result = await RunUxpTracked("export-document.js", inputs.Render("export-document.js"), inputs.Values, operationId).ConfigureAwait(false);
                 var after = await SnapshotAllDocuments().ConfigureAwait(false);
-                AssertStableSnapshots(expected, after, "Un document a changé pendant l’export silencieux.");
+                AssertStableSnapshots(expected, after, Strings.T("A document changed during the silent export.", "Un document a changé pendant l’export silencieux."));
                 result["safetyBackups"] = safetyBackups.DeepClone();
                 return result;
             }
@@ -680,11 +680,11 @@ internal sealed partial class SilentBridge
     /// <summary>save_document (savePath null) or save_as: backups first, the other documents checked unchanged.</summary>
     public Task<JsonObject> SaveDocument(long documentId, long expectedRevision, string expectedStateToken, string? savePath, string? operationId = null)
     {
-        if (savePath is not null && !ValidAbsolute(savePath, ".indd")) throw Fail("SAVE_PATH_INVALID", "Un chemin INDD absolu valide est requis.");
+        if (savePath is not null && !ValidAbsolute(savePath, ".indd")) throw Fail("SAVE_PATH_INVALID", Strings.T("A valid absolute INDD path is required.", "Un chemin INDD absolu valide est requis."));
         operationId ??= activeOperation.Value ?? Json.NewId();
         return WithMutationGuard(operationId, async () =>
         {
-            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, "Document introuvable avant l’enregistrement.").ConfigureAwait(false);
+            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, Strings.T("Document not found before saving.", "Document introuvable avant l’enregistrement.")).ConfigureAwait(false);
             var safetyBackups = new JsonArray();
             try
             {
@@ -711,7 +711,7 @@ internal sealed partial class SilentBridge
         string operationId = Json.NewId();
         return WithMutationGuard(operationId, async () =>
         {
-            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, "Document introuvable avant sauvegarde.").ConfigureAwait(false);
+            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, Strings.T("Document not found before the backup.", "Document introuvable avant sauvegarde.")).ConfigureAwait(false);
             var safetyBackups = await BackupDocuments(documents).ConfigureAwait(false);
             var inputs = new Inputs()
                 .Add("documentId", documentId)
@@ -745,7 +745,7 @@ internal sealed partial class SilentBridge
     public Task<JsonObject> RunLayoutScript(long documentId, long expectedRevision, string expectedStateToken, string code, JsonNode? input,
         bool save, bool close, string? previewPages, long previewResolution, string? reason = null)
     {
-        if (close && !save) throw Fail("CLOSE_REQUIRES_SAVE", "close exige save=true : fermer sans enregistrer perdrait le travail du script.");
+        if (close && !save) throw Fail("CLOSE_REQUIRES_SAVE", Strings.T("close needs save=true: closing without saving would lose the script's work.", "close exige save=true : fermer sans enregistrer perdrait le travail du script."));
         string operationId = Json.NewId();
         return WithMutationGuard(operationId, async () =>
         {
@@ -777,7 +777,7 @@ internal sealed partial class SilentBridge
             {
                 long slotIndex = Json.Long(backup, "slot") ?? -1;
                 if (slotIndex < 0 || slotIndex >= slots.Count)
-                    throw Fail("BACKUP_RESPONSE_MISMATCH", "La sauvegarde rapide ne correspond à aucun emplacement signé localement.");
+                    throw Fail("BACKUP_RESPONSE_MISMATCH", Strings.T("The quick backup matches no locally signed location.", "La sauvegarde rapide ne correspond à aucun emplacement signé localement."));
                 var slot = slots[(int)slotIndex];
                 long backupDocumentId = Json.Long(backup, "documentId") ?? 0, revision = Json.Long(backup, "revision") ?? -1;
                 string token = Json.Str(backup, "stateToken") ?? "";
@@ -804,8 +804,8 @@ internal sealed partial class SilentBridge
                 outcome["outcome"] = changed ? "partial" : "not_done";
                 outcome["retry_safe"] = !changed;
                 outcome["nextStep"] = changed
-                    ? "Le script a échoué après avoir modifié le document : relisez l’aperçu, corrigez puis relancez, ou restaurez avec silent_restore_backup et backupId (ses modifications forment une seule étape d’annulation InDesign)."
-                    : "Le script a échoué sans modifier le document : corrigez puis relancez (restauration possible avec silent_restore_backup et backupId).";
+                    ? Strings.T("The script failed after changing the document: check the preview, fix it and run again, or restore with silent_restore_backup and backupId (its changes form a single InDesign undo step).", "Le script a échoué après avoir modifié le document : relisez l’aperçu, corrigez puis relancez, ou restaurez avec silent_restore_backup et backupId (ses modifications forment une seule étape d’annulation InDesign).")
+                    : Strings.T("The script failed without changing the document: fix it and run again (silent_restore_backup with backupId can restore).", "Le script a échoué sans modifier le document : corrigez puis relancez (restauration possible avec silent_restore_backup et backupId).");
             }
             return outcome;
         });
@@ -821,17 +821,17 @@ internal sealed partial class SilentBridge
 
     public async Task<JsonObject> RestoreBackup(long documentId, long expectedRevision, string expectedStateToken, string backupId)
     {
-        if (!Json.BackupId().IsMatch(backupId)) throw Fail("BACKUP_ID_INVALID", "Identifiant de sauvegarde silencieuse invalide.");
+        if (!Json.BackupId().IsMatch(backupId)) throw Fail("BACKUP_ID_INVALID", Strings.T("Invalid silent backup id.", "Identifiant de sauvegarde silencieuse invalide."));
         string backupPath = BackupPathFor(backupId);
         var metadata = ReadBackupMetadata(backupId, backupPath, documentId);
         string operationId = Json.NewId();
         return await WithMutationGuard(operationId, async () =>
         {
-            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, "Document à restaurer introuvable.").ConfigureAwait(false);
+            var documents = await ExpectState(documentId, expectedRevision, expectedStateToken, Strings.T("Document to restore not found.", "Document à restaurer introuvable.")).ConfigureAwait(false);
             var recoveryBackups = await BackupDocuments(documents).ConfigureAwait(false);
             string restoredDirectory = Path.Combine(BackupDirectory, "restored");
             Directory.CreateDirectory(restoredDirectory);
-            if (!IsRegularDirectory(restoredDirectory)) throw Fail("RESTORED_DIRECTORY_INVALID", "Le dossier privé des copies restaurées est invalide.");
+            if (!IsRegularDirectory(restoredDirectory)) throw Fail("RESTORED_DIRECTORY_INVALID", Strings.T("The private folder of restored copies is invalid.", "Le dossier privé des copies restaurées est invalide."));
             Protect(restoredDirectory, directory: true);
             string id = Json.NewId();
             string workingPath = Path.Combine(restoredDirectory, $"restore-{id}.indd");
@@ -898,16 +898,16 @@ internal sealed partial class SilentBridge
         {
             var before = (await InspectDocument(documentId).ConfigureAwait(false))["document"] as JsonObject;
             if (before is null || Json.Long(before, "revision") != expectedRevision)
-                throw Fail("REVISION_CONFLICT", "Le document source a changé avant la création de la copie de travail.");
+                throw Fail("REVISION_CONFLICT", Strings.T("The source document changed before the working copy was created.", "Le document source a changé avant la création de la copie de travail."));
             if (Json.Str(before, "stateToken") != expectedStateToken)
-                throw Fail("STATE_CONFLICT", "Le contenu du document source a changé avant la création de la copie de travail.");
+                throw Fail("STATE_CONFLICT", Strings.T("The content of the source document changed before the working copy was created.", "Le contenu du document source a changé avant la création de la copie de travail."));
             var targetProtection = protectTarget();
             string backupId = Json.NewId();
             string backupPath = BackupPathFor(backupId);
             await CreateBackup(documentId, expectedRevision, backupPath, backupId).ConfigureAwait(false);
             var afterBackup = (await InspectDocument(documentId).ConfigureAwait(false))["document"] as JsonObject;
             if (Json.Long(afterBackup, "revision") != expectedRevision || Json.Str(afterBackup, "stateToken") != expectedStateToken)
-                throw Fail("STATE_CONFLICT", "Le document source a changé pendant sa sauvegarde de sécurité.");
+                throw Fail("STATE_CONFLICT", Strings.T("The source document changed during its safety backup.", "Le document source a changé pendant sa sauvegarde de sécurité."));
             var metadata = WriteBackupMetadata(backupId, backupPath, documentId, expectedRevision, expectedStateToken);
             bool copied = false, opened = false;
             string? targetBackupPath = Json.Str(targetProtection, "targetBackupPath");
@@ -921,7 +921,7 @@ internal sealed partial class SilentBridge
                 opened = true;
                 var after = (await InspectDocument(documentId).ConfigureAwait(false))["document"] as JsonObject;
                 if (Json.Long(after, "revision") != expectedRevision || Json.Str(after, "stateToken") != expectedStateToken)
-                    throw new ToolError("WORKING_COPY_SOURCE_CHANGED", "Le document source a changé pendant la création de la copie de travail.", true) { PartialOutputPath = targetPath };
+                    throw new ToolError("WORKING_COPY_SOURCE_CHANGED", Strings.T("The source document changed while the working copy was created.", "Le document source a changé pendant la création de la copie de travail."), true) { PartialOutputPath = targetPath };
                 var output = new JsonObject
                 {
                     ["success"] = true, ["sourceDocumentId"] = documentId, ["sourceRevision"] = expectedRevision,

@@ -1,10 +1,10 @@
-  if (app.modalState) { const error = new Error("InDesign affiche une boîte de dialogue modale"); error.code = "INDESIGN_MODAL"; throw error; }
+  if (app.modalState) { const error = new Error(__t("InDesign shows a modal dialog", "InDesign affiche une boîte de dialogue modale")); error.code = "INDESIGN_MODAL"; throw error; }
   const wanted = @@documentId@@;
   const expectedRevision = @@expectedRevision@@;
   const expectedStateToken = @@expectedStateToken@@;
   const slots = @@slots@@;
   const label = "fr.pironjulien.indesign.mcp.revision";
-  if (app.documents.length > slots.length) { const error = new Error("Trop de documents ouverts pour l’outil rapide"); error.code = "TOO_MANY_OPEN_DOCUMENTS"; throw error; }
+  if (app.documents.length > slots.length) { const error = new Error(__t("Too many open documents for the quick tool", "Trop de documents ouverts pour l’outil rapide")); error.code = "TOO_MANY_OPEN_DOCUMENTS"; throw error; }
   const readRevision = (doc) => Number.parseInt(doc.extractLabel(label) || "0", 10) || 0;
   const open = [];
   let target = null;
@@ -14,12 +14,12 @@
     open.push(entry);
     if (entry.documentId === wanted) target = entry;
   }
-  if (!target) { const error = new Error("Document introuvable"); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
-  if (target.revision !== expectedRevision) { const error = new Error("Le document a changé depuis la dernière lecture"); error.code = "REVISION_CONFLICT"; throw error; }
-  if (target.stateToken !== expectedStateToken) { const error = new Error("Le document a changé depuis la dernière inspection"); error.code = "STATE_CONFLICT"; throw error; }
-  // Document enregistré et sans modification en cours : son fichier est exactement son état, la sauvegarde est une
-  // copie d'octets (rapide, et absente des fichiers récents d'InDesign). Sinon saveACopy.
-  // UXP : fullName est une promesse (chaîne ou objet fichier selon la version).
+  if (!target) { const error = new Error(__t("Document not found", "Document introuvable")); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
+  if (target.revision !== expectedRevision) { const error = new Error(__t("The document changed since the last read", "Le document a changé depuis la dernière lecture")); error.code = "REVISION_CONFLICT"; throw error; }
+  if (target.stateToken !== expectedStateToken) { const error = new Error(__t("The document changed since the last inspection", "Le document a changé depuis la dernière inspection")); error.code = "STATE_CONFLICT"; throw error; }
+  // A saved document with no pending change: its file is exactly its state, so the backup is a byte copy (fast, and
+  // kept out of InDesign's recent files). Otherwise saveACopy.
+  // UXP: fullName is a promise (a string or a file object depending on the version).
   const sourcePathOf = async (doc) => {
     try {
       const name = await doc.fullName;
@@ -51,8 +51,8 @@
     app.scriptPreferences.userInteractionLevel = indesign.UserInteractionLevels.NEVER_INTERACT !== undefined ? indesign.UserInteractionLevels.NEVER_INTERACT : indesign.UserInteractionLevels.neverInteract;
     app.scriptPreferences.enableRedraw = false;
     const executeUserCode = new Function("app", "indesign", "doc", "input", '"use strict"; return (async function () {\n' + userCode + '\n}).call(null);');
-    // Une seule étape d'annulation : la partie synchrone du script (tout ce qui précède son premier await) s'exécute
-    // dans un doScript ENTIRE_SCRIPT nommé ; un doScript UXP asynchrone ne regroupe rien.
+    // One undo step: the synchronous part of the script (everything before its first await) runs in a named
+    // ENTIRE_SCRIPT doScript; an asynchronous UXP doScript groups nothing.
     let pending = null;
     try { app.doScript(() => { pending = executeUserCode(app, indesign, target.doc, userInput); }, indesign.ScriptLanguage.UXPSCRIPT, [], indesign.UndoModes.ENTIRE_SCRIPT, undoName); grouped = pending !== null; } catch (_) {}
     if (pending === null) pending = executeUserCode(app, indesign, target.doc, userInput);
@@ -63,9 +63,9 @@
     try { app.scriptPreferences.userInteractionLevel = previousInteraction; } catch (_) {}
     try { app.scriptPreferences.enableRedraw = previousRedraw; } catch (_) {}
   }
-  // Seuls les documents dont l'empreinte a changé avancent : un document non touché (cible d'un script de lecture
-  // compris) garde sa révision et son jeton, et n'est pas marqué modifié par l'étiquette de révision.
-  // AUTO_UNDO : l'étiquette de révision rejoint l'étape du script, une annulation rend aussi l'ancienne révision.
+  // Only documents whose fingerprint changed move forward: an untouched document (the target of a read-only script
+  // included) keeps its revision and token, and is not marked modified by the revision label.
+  // AUTO_UNDO: the revision label joins the script's step, so an undo also brings back the previous revision.
   const revisions = [];
   const writeRevisions = () => {
     revisions.length = 0;

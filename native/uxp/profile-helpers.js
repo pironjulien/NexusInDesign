@@ -57,7 +57,7 @@
     const windows = doc && doc.layoutWindows;
     const layoutWindow = windows && windows.length > 0 ? windows.item(0) : null;
     if (!layoutWindow || layoutWindow.isValid === false || typeof layoutWindow.bringToFront !== "function") {
-      const error = new Error("Aucune fenêtre de mise en page ne permet de vérifier le changement de focus"); error.code = code; throw error;
+      const error = new Error(__t("No layout window can confirm the focus change", "Aucune fenêtre de mise en page ne permet de vérifier le changement de focus")); error.code = code; throw error;
     }
     await Promise.resolve(layoutWindow.bringToFront());
     const deadline = Date.now() + 2000;
@@ -65,6 +65,6 @@
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
     if (!app.activeDocument || Number(app.activeDocument.id) !== Number(doc.id)) {
-      const error = new Error("Le changement de document actif n’a pas été confirmé"); error.code = code; throw error;
+      const error = new Error(__t("The active document change was not confirmed", "Le changement de document actif n’a pas été confirmé")); error.code = code; throw error;
     }
   };

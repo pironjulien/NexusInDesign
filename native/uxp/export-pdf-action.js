@@ -2,7 +2,7 @@
   let preset;
   if (requestedPreset) {
     preset = app.pdfExportPresets.itemByName(requestedPreset);
-    if (!preset || preset.isValid === false) { const error = new Error("Paramètre PDF introuvable"); error.code = "PDF_PRESET_NOT_FOUND"; throw error; }
+    if (!preset || preset.isValid === false) { const error = new Error(__t("PDF preset not found", "Paramètre PDF introuvable")); error.code = "PDF_PRESET_NOT_FOUND"; throw error; }
   }
   const preferences = app.pdfExportPreferences;
   const previousPageRange = preferences.pageRange;

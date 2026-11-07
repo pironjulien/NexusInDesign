@@ -6,7 +6,8 @@ namespace NexusInDesign.InDesign;
 /// <summary>
 /// The UXP (and one ExtendScript) programs InDesign runs through DoScript, embedded from native/uxp. A template names
 /// its inputs as @@name@@; each is replaced by raw JavaScript (a literal built by <see cref="Json.Literal"/>, or a
-/// fragment of another template). A missing input refuses the script before InDesign sees it.
+/// fragment of another template). A missing input refuses the script before InDesign sees it. @@FRENCH@@ is true when
+/// the engine speaks French (<see cref="Strings.French"/>), so the scripts' own messages follow the same language.
 /// </summary>
 internal static partial class UxpTemplates
 {
@@ -44,7 +45,8 @@ internal static partial class UxpTemplates
                 "PROFILE_HELPERS" => Load("profile-helpers.js"),
                 "AUDIT_FUNCTIONS" => Load("audit-functions.js").TrimEnd('\n'),
                 "ANNOTATE_FUNCTIONS" => Load("annotate-functions.js").TrimEnd('\n'),
-                _ => throw new ToolError("GENERATED_UXP_INPUT_MISSING", $"Le script UXP {name} attend la valeur {key}; il n’a pas été envoyé à InDesign."),
+                "FRENCH" => Strings.French ? "true" : "false",
+                _ => throw new ToolError("GENERATED_UXP_INPUT_MISSING", Strings.T($"The UXP script {name} expects the value {key}; it was not sent to InDesign.", $"Le script UXP {name} attend la valeur {key}; il n’a pas été envoyé à InDesign.")),
             };
         });
     }

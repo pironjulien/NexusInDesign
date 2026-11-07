@@ -14,11 +14,11 @@ internal static class OutputProtection
         if (!isFile && !isDirectory) return [];
         FileSystemInfo info = isFile ? new FileInfo(targetPath) : new DirectoryInfo(targetPath);
         if ((kind == "file" && !isFile) || (kind == "directory" && !isDirectory) || info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-            throw new ToolError("TARGET_TYPE_MISMATCH", "La cible existante n’a pas le type attendu.");
+            throw new ToolError("TARGET_TYPE_MISMATCH", Strings.T("The existing target does not have the expected type.", "La cible existante n’a pas le type attendu."));
         if (!overwrite)
-            throw new ToolError("TARGET_EXISTS", "La cible existe déjà. Transmettez overwrite=true pour autoriser son remplacement après copie de sécurité.");
+            throw new ToolError("TARGET_EXISTS", Strings.T("The target already exists. Pass overwrite=true to allow replacing it after a safety copy.", "La cible existe déjà. Transmettez overwrite=true pour autoriser son remplacement après copie de sécurité."));
         if (isDirectory && new DirectoryInfo(targetPath).EnumerateFileSystemInfos("*", SearchOption.AllDirectories).Any(entry => entry.Attributes.HasFlag(FileAttributes.ReparsePoint)))
-            throw new ToolError("TARGET_REPARSE_POINT", "La cible contient une jonction ou un lien symbolique.");
+            throw new ToolError("TARGET_REPARSE_POINT", Strings.T("The target contains a junction or a symbolic link.", "La cible contient une jonction ou un lien symbolique."));
         string id = Json.NewId();
         string extension = isFile ? Path.GetExtension(targetPath).ToLowerInvariant() : "";
         string backup = Path.Combine(backupRoot, $"target-backup-{id}{extension}");
@@ -46,7 +46,7 @@ internal static class OutputProtection
 
     private static void CopyDirectory(string source, string target)
     {
-        if (Directory.Exists(target)) throw new IOException("La copie de sécurité de la cible existe déjà.");
+        if (Directory.Exists(target)) throw new IOException(Strings.T("The safety copy of the target already exists.", "La copie de sécurité de la cible existe déjà."));
         Directory.CreateDirectory(target);
         foreach (string directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
             Directory.CreateDirectory(Path.Combine(target, Path.GetRelativePath(source, directory)));

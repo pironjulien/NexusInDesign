@@ -30,7 +30,7 @@ internal sealed class PathPolicy
             {
                 if (!Directory.Exists(root))
                 {
-                    if (mustExist) throw new ToolError("CONFIG_INVALID", $"La racine autorisée n’est pas un dossier : {root}");
+                    if (mustExist) throw new ToolError("CONFIG_INVALID", Strings.T($"The allowed root is not a folder: {root}", $"La racine autorisée n’est pas un dossier : {root}"));
                     list.Add(Path.GetFullPath(root));
                     continue;
                 }
@@ -61,7 +61,7 @@ internal sealed class PathPolicy
         {
             current = Path.Combine(current, part);
             FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
-            if (!info.Exists) throw new FileNotFoundException("Chemin introuvable.", current);
+            if (!info.Exists) throw new FileNotFoundException("Path not found.", current);
             if (info.LinkTarget is not null)
             {
                 var target = info.ResolveLinkTarget(returnFinalTarget: true);
@@ -74,13 +74,13 @@ internal sealed class PathPolicy
     private static void ValidateRaw(string candidate)
     {
         if (string.IsNullOrEmpty(candidate) || candidate.Contains('\0', StringComparison.Ordinal) || !Path.IsPathFullyQualified(candidate))
-            throw new ToolError("PATH_INVALID", "Le chemin doit être absolu et valide.");
+            throw new ToolError("PATH_INVALID", Strings.T("The path must be absolute and valid.", "Le chemin doit être absolu et valide."));
     }
 
     private void AssertNotDenied(string candidate, string operation)
     {
         if (deniedRoots.Any(root => IsInside(root, candidate)))
-            throw new ToolError("PATH_DENIED", $"{operation} refusée : le chemin réel entre dans une racine privée interdite.");
+            throw new ToolError("PATH_DENIED", Strings.T($"{operation} refused: the real path enters a denied private root.", $"{operation} refusée : le chemin réel entre dans une racine privée interdite."));
     }
 
     private static bool ExtensionAllowed(string candidate, IReadOnlyCollection<string>? extensions) =>
@@ -91,14 +91,14 @@ internal sealed class PathPolicy
         ValidateRaw(candidate);
         string canonical;
         try { canonical = RealPath(candidate); }
-        catch (FileNotFoundException) { throw new ToolError("PATH_NOT_FOUND", "Lecture refusée : le chemin est introuvable."); }
-        AssertNotDenied(canonical, "Lecture");
+        catch (FileNotFoundException) { throw new ToolError("PATH_NOT_FOUND", Strings.T("Read refused: the path does not exist.", "Lecture refusée : le chemin est introuvable.")); }
+        AssertNotDenied(canonical, Strings.T("Read", "Lecture"));
         if (!readRoots.Any(root => IsInside(root, canonical)))
-            throw new ToolError("PATH_OUTSIDE_ROOTS", "Lecture refusée : le chemin réel sort des racines autorisées.");
-        if (kind == "file" && !File.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", "Lecture refusée : un fichier est attendu.");
-        if (kind == "directory" && !Directory.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", "Lecture refusée : un dossier est attendu.");
+            throw new ToolError("PATH_OUTSIDE_ROOTS", Strings.T("Read refused: the real path is outside the allowed roots.", "Lecture refusée : le chemin réel sort des racines autorisées."));
+        if (kind == "file" && !File.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", Strings.T("Read refused: a file is expected.", "Lecture refusée : un fichier est attendu."));
+        if (kind == "directory" && !Directory.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", Strings.T("Read refused: a folder is expected.", "Lecture refusée : un dossier est attendu."));
         if (kind == "file" && !ExtensionAllowed(canonical, extensions))
-            throw new ToolError("PATH_EXTENSION_DENIED", "Lecture refusée : extension non autorisée pour cet outil.");
+            throw new ToolError("PATH_EXTENSION_DENIED", Strings.T("Read refused: extension not allowed for this tool.", "Lecture refusée : extension non autorisée pour cet outil."));
         return canonical;
     }
 
@@ -107,26 +107,26 @@ internal sealed class PathPolicy
         ValidateRaw(candidate);
         string absolute = Path.GetFullPath(candidate);
         if (kind == "file" && !ExtensionAllowed(absolute, extensions))
-            throw new ToolError("PATH_EXTENSION_DENIED", "Écriture refusée : extension non autorisée pour cet outil.");
+            throw new ToolError("PATH_EXTENSION_DENIED", Strings.T("Write refused: extension not allowed for this tool.", "Écriture refusée : extension non autorisée pour cet outil."));
         string existing = absolute;
         while (!File.Exists(existing) && !Directory.Exists(existing))
         {
             string? parent = Path.GetDirectoryName(existing);
-            if (parent is null || parent == existing) throw new ToolError("PATH_NOT_FOUND", "Écriture refusée : aucun parent existant.");
+            if (parent is null || parent == existing) throw new ToolError("PATH_NOT_FOUND", Strings.T("Write refused: no existing parent.", "Écriture refusée : aucun parent existant."));
             existing = parent;
         }
         string realParent = RealPath(existing);
-        AssertNotDenied(realParent, "Écriture");
+        AssertNotDenied(realParent, Strings.T("Write", "Écriture"));
         if (!writeRoots.Any(root => IsInside(root, realParent)))
-            throw new ToolError("PATH_OUTSIDE_ROOTS", "Écriture refusée : le chemin réel sort des racines autorisées.");
+            throw new ToolError("PATH_OUTSIDE_ROOTS", Strings.T("Write refused: the real path is outside the allowed roots.", "Écriture refusée : le chemin réel sort des racines autorisées."));
         if (!File.Exists(absolute) && !Directory.Exists(absolute))
             return realParent == existing ? absolute : Path.Combine(realParent, Path.GetRelativePath(existing, absolute));
         string canonical = RealPath(absolute);
-        AssertNotDenied(canonical, "Écriture");
-        if (kind == "file" && !File.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", "Écriture refusée : la cible existante n’est pas un fichier.");
-        if (kind == "directory" && !Directory.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", "Écriture refusée : la cible existante n’est pas un dossier.");
+        AssertNotDenied(canonical, Strings.T("Write", "Écriture"));
+        if (kind == "file" && !File.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", Strings.T("Write refused: the existing target is not a file.", "Écriture refusée : la cible existante n’est pas un fichier."));
+        if (kind == "directory" && !Directory.Exists(canonical)) throw new ToolError("PATH_TYPE_MISMATCH", Strings.T("Write refused: the existing target is not a folder.", "Écriture refusée : la cible existante n’est pas un dossier."));
         if (!writeRoots.Any(root => IsInside(root, canonical)))
-            throw new ToolError("PATH_OUTSIDE_ROOTS", "Écriture refusée : la cible réelle sort des racines autorisées.");
+            throw new ToolError("PATH_OUTSIDE_ROOTS", Strings.T("Write refused: the real target is outside the allowed roots.", "Écriture refusée : la cible réelle sort des racines autorisées."));
         return canonical;
     }
 }

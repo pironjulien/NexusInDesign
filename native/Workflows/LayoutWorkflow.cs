@@ -58,29 +58,29 @@ internal static partial class LayoutWorkflow
         bool Allowed(string flag) => Json.IsTrue(contract, flag);
 
         if (Json.IsTrue(snapshot, "truncated") && Json.Bool(contract, "requireCompleteSnapshot") != false)
-            issues.Add(Issue("SNAPSHOT_TRUNCATED", "error", "Le diagnostic a atteint la limite d’objets ; une validation exhaustive est impossible.",
+            issues.Add(Issue("SNAPSHOT_TRUNCATED", "error", Strings.T("The diagnosis reached the item limit; an exhaustive validation is impossible.", "Le diagnostic a atteint la limite d’objets ; une validation exhaustive est impossible."),
                 new JsonObject { ["totalItems"] = snapshot["totalItems"]?.DeepClone(), ["inspectedItems"] = items.Count }));
         if (!Allowed("allowOversetText"))
             foreach (var item in items.Where(entry => Json.IsTrue(entry, "overflows")))
-                issues.Add(Issue("OVERSET_TEXT", "error", "Un bloc de texte déborde.", new JsonObject { ["pageId"] = item["pageId"]?.DeepClone(), ["itemId"] = item["id"]?.DeepClone() }));
+                issues.Add(Issue("OVERSET_TEXT", "error", Strings.T("A text frame overflows.", "Un bloc de texte déborde."), new JsonObject { ["pageId"] = item["pageId"]?.DeepClone(), ["itemId"] = item["id"]?.DeepClone() }));
         var links = Objects(snapshot["links"]).ToList();
         if (!Allowed("allowMissingLinks"))
             foreach (var link in links.Where(entry => MissingLink().IsMatch(StatusText(entry))))
-                issues.Add(Issue("MISSING_LINK", "error", "Un lien placé est manquant.", new JsonObject { ["linkId"] = link["id"]?.DeepClone(), ["name"] = link["name"]?.DeepClone() }));
+                issues.Add(Issue("MISSING_LINK", "error", Strings.T("A placed link is missing.", "Un lien placé est manquant."), new JsonObject { ["linkId"] = link["id"]?.DeepClone(), ["name"] = link["name"]?.DeepClone() }));
         foreach (var link in links.Where(entry => OutdatedLink().IsMatch(StatusText(entry))))
-            issues.Add(Issue("OUTDATED_LINK", Allowed("allowOutdatedLinks") ? "warning" : "error", "Un lien placé n’est pas à jour.",
+            issues.Add(Issue("OUTDATED_LINK", Allowed("allowOutdatedLinks") ? "warning" : "error", Strings.T("A placed link is out of date.", "Un lien placé n’est pas à jour."),
                 new JsonObject { ["linkId"] = link["id"]?.DeepClone(), ["name"] = link["name"]?.DeepClone() }));
         var fonts = Objects(snapshot["fonts"]).ToList();
         if (!Allowed("allowMissingFonts"))
             foreach (var font in fonts.Where(entry => MissingFont().IsMatch(StatusText(entry))))
-                issues.Add(Issue("MISSING_FONT", "error", "Une police utilisée est indisponible ou substituée.", new JsonObject { ["name"] = font["name"]?.DeepClone() }));
+                issues.Add(Issue("MISSING_FONT", "error", Strings.T("A used font is unavailable or substituted.", "Une police utilisée est indisponible ou substituée."), new JsonObject { ["name"] = font["name"]?.DeepClone() }));
         if (Number(contract["minEffectivePpi"]) is double minPpi)
         {
             foreach (var image in Objects(snapshot["images"]))
             {
                 var values = (image["effectivePpi"] as JsonArray ?? []).Select(Number).OfType<double>().ToList();
                 if (values.Count > 0 && values.Min() < minPpi)
-                    issues.Add(Issue("LOW_EFFECTIVE_PPI", "error", "La résolution effective d’une image est inférieure au contrat.", new JsonObject
+                    issues.Add(Issue("LOW_EFFECTIVE_PPI", "error", Strings.T("The effective resolution of an image is below the contract.", "La résolution effective d’une image est inférieure au contrat."), new JsonObject
                     {
                         ["imageId"] = image["id"]?.DeepClone(), ["pageId"] = image["pageId"]?.DeepClone(), ["effectivePpi"] = values.Min(), ["requiredPpi"] = minPpi,
                     }));
@@ -92,7 +92,7 @@ internal static partial class LayoutWorkflow
             {
                 var margins = (page["margins"] as JsonObject ?? []).Select(pair => Number(pair.Value)).OfType<double>();
                 if (margins.Any(value => value < minMargin))
-                    issues.Add(Issue("MARGIN_BELOW_CONTRACT", "error", "Une marge de page est inférieure au contrat.", new JsonObject
+                    issues.Add(Issue("MARGIN_BELOW_CONTRACT", "error", Strings.T("A page margin is below the contract.", "Une marge de page est inférieure au contrat."), new JsonObject
                     {
                         ["pageId"] = page["id"]?.DeepClone(), ["margins"] = page["margins"]?.DeepClone(), ["requiredMm"] = minMargin,
                     }));
@@ -113,26 +113,26 @@ internal static partial class LayoutWorkflow
                     return direct || rotated;
                 });
                 if (!matches)
-                    issues.Add(Issue("PAGE_SIZE_NOT_ALLOWED", "error", "Le format d’une page ne correspond à aucun format autorisé.", new JsonObject
+                    issues.Add(Issue("PAGE_SIZE_NOT_ALLOWED", "error", Strings.T("A page size matches no allowed size.", "Le format d’une page ne correspond à aucun format autorisé."), new JsonObject
                     {
                         ["pageId"] = page["id"]?.DeepClone(), ["widthMm"] = page["widthMm"]?.DeepClone(), ["heightMm"] = page["heightMm"]?.DeepClone(),
                     }));
             }
         }
         if (Json.Bool(contract, "requireFacingPages") is bool facing && Json.IsTrue(snapshot["document"], "facingPages") != facing)
-            issues.Add(Issue("FACING_PAGES_MISMATCH", "error", "Le réglage des pages en vis-à-vis ne respecte pas le contrat.",
+            issues.Add(Issue("FACING_PAGES_MISMATCH", "error", Strings.T("The facing pages setting does not follow the contract.", "Le réglage des pages en vis-à-vis ne respecte pas le contrat."),
                 new JsonObject { ["actual"] = Json.IsTrue(snapshot["document"], "facingPages"), ["expected"] = facing }));
         if (Json.Long(contract, "maxPages") is long maxPages && pages.Count > maxPages)
-            issues.Add(Issue("TOO_MANY_PAGES", "error", "Le document dépasse le nombre de pages autorisé.", new JsonObject { ["actual"] = pages.Count, ["maximum"] = maxPages }));
+            issues.Add(Issue("TOO_MANY_PAGES", "error", Strings.T("The document exceeds the allowed page count.", "Le document dépasse le nombre de pages autorisé."), new JsonObject { ["actual"] = pages.Count, ["maximum"] = maxPages }));
         int swatches = (designSystem["swatches"] as JsonArray)?.Count ?? 0;
         if (Json.Long(contract, "maxColors") is long maxColors && swatches > maxColors)
-            issues.Add(Issue("TOO_MANY_SWATCHES", "warning", "Le document dépasse le nombre de nuances prévu par le contrat.", new JsonObject { ["actual"] = swatches, ["maximum"] = maxColors }));
+            issues.Add(Issue("TOO_MANY_SWATCHES", "warning", Strings.T("The document exceeds the swatch count set by the contract.", "Le document dépasse le nombre de nuances prévu par le contrat."), new JsonObject { ["actual"] = swatches, ["maximum"] = maxColors }));
         foreach (var (field, collection, code, message) in new[]
         {
-            ("requiredLayers", "layers", "REQUIRED_LAYER_MISSING", "Un calque requis est absent."),
-            ("requiredParagraphStyles", "paragraphStyles", "REQUIRED_PARAGRAPH_STYLE_MISSING", "Un style de paragraphe requis est absent."),
-            ("requiredCharacterStyles", "characterStyles", "REQUIRED_CHARACTER_STYLE_MISSING", "Un style de caractère requis est absent."),
-            ("requiredObjectStyles", "objectStyles", "REQUIRED_OBJECT_STYLE_MISSING", "Un style d’objet requis est absent."),
+            ("requiredLayers", "layers", "REQUIRED_LAYER_MISSING", Strings.T("A required layer is missing.", "Un calque requis est absent.")),
+            ("requiredParagraphStyles", "paragraphStyles", "REQUIRED_PARAGRAPH_STYLE_MISSING", Strings.T("A required paragraph style is missing.", "Un style de paragraphe requis est absent.")),
+            ("requiredCharacterStyles", "characterStyles", "REQUIRED_CHARACTER_STYLE_MISSING", Strings.T("A required character style is missing.", "Un style de caractère requis est absent.")),
+            ("requiredObjectStyles", "objectStyles", "REQUIRED_OBJECT_STYLE_MISSING", Strings.T("A required object style is missing.", "Un style d’objet requis est absent.")),
         })
         {
             var existing = Names(designSystem[collection]);
@@ -145,12 +145,12 @@ internal static partial class LayoutWorkflow
             {
                 var identifiers = new[] { font["name"]?.ToString(), font["family"]?.ToString() }.Where(entry => !string.IsNullOrEmpty(entry)).Select(entry => entry!.ToLowerInvariant());
                 if (!identifiers.Any(allowedFonts.Contains))
-                    issues.Add(Issue("FONT_NOT_ALLOWED", "error", "Une police utilisée ne figure pas dans le contrat.", new JsonObject { ["name"] = font["name"]?.DeepClone(), ["family"] = font["family"]?.DeepClone() }));
+                    issues.Add(Issue("FONT_NOT_ALLOWED", "error", Strings.T("A used font is not in the contract.", "Une police utilisée ne figure pas dans le contrat."), new JsonObject { ["name"] = font["name"]?.DeepClone(), ["family"] = font["family"]?.DeepClone() }));
             }
         if (Number(contract["minimumStylePointSizePt"]) is double minimumPt)
             foreach (var style in Objects(designSystem["paragraphStyles"]).Concat(Objects(designSystem["characterStyles"])))
                 if (Number(style["pointSize"]) is double size && size > 0 && size < minimumPt)
-                    issues.Add(Issue("STYLE_TEXT_TOO_SMALL", "warning", "Un style typographique utilise un corps inférieur au contrat.", new JsonObject
+                    issues.Add(Issue("STYLE_TEXT_TOO_SMALL", "warning", Strings.T("A text style uses a point size below the contract.", "Un style typographique utilise un corps inférieur au contrat."), new JsonObject
                     {
                         ["name"] = style["name"]?.DeepClone(), ["pointSize"] = size, ["minimumPt"] = minimumPt,
                     }));
@@ -164,7 +164,7 @@ internal static partial class LayoutWorkflow
             bool invalid = !valid || height < 0 || width < 0 || (line ? height == 0 && width == 0 : height <= 0 || width <= 0);
             if (invalid)
             {
-                issues.Add(Issue("INVALID_ITEM_GEOMETRY", "error", "Un objet possède une géométrie invalide.", new JsonObject
+                issues.Add(Issue("INVALID_ITEM_GEOMETRY", "error", Strings.T("An item has an invalid geometry.", "Un objet possède une géométrie invalide."), new JsonObject
                 {
                     ["pageId"] = item["pageId"]?.DeepClone(), ["itemId"] = item["id"]?.DeepClone(), ["bounds"] = item["bounds"]?.DeepClone(),
                 }));
@@ -178,7 +178,7 @@ internal static partial class LayoutWorkflow
                 {
                     bool outside = bounds[0] < pageBounds[0] - limit || bounds[1] < pageBounds[1] - limit || bounds[2] > pageBounds[2] + limit || bounds[3] > pageBounds[3] + limit;
                     if (outside)
-                        issues.Add(Issue("ITEM_OUTSIDE_PAGE_LIMIT", "warning", "Un objet dépasse la page au-delà de la tolérance du contrat.", new JsonObject
+                        issues.Add(Issue("ITEM_OUTSIDE_PAGE_LIMIT", "warning", Strings.T("An item extends past the page beyond the contract tolerance.", "Un objet dépasse la page au-delà de la tolérance du contrat."), new JsonObject
                         {
                             ["pageId"] = item["pageId"]?.DeepClone(), ["itemId"] = item["id"]?.DeepClone(), ["bounds"] = item["bounds"]?.DeepClone(), ["toleranceMm"] = limit,
                         }));
@@ -204,33 +204,33 @@ internal static partial class LayoutWorkflow
     {
         static JsonNode? Clone(JsonNode? node) => node?.DeepClone();
         if (Json.IsTrue(typography, "truncated"))
-            yield return Issue("TYPOGRAPHY_AUDIT_TRUNCATED", "warning", "L’audit typographique a atteint la limite de paragraphes ; certains récits n’ont pas été lus.",
+            yield return Issue("TYPOGRAPHY_AUDIT_TRUNCATED", "warning", Strings.T("The typography audit reached the paragraph limit; some stories were not read.", "L’audit typographique a atteint la limite de paragraphes ; certains récits n’ont pas été lus."),
                 new JsonObject { ["inspectedParagraphs"] = Clone(typography["inspectedParagraphs"]), ["totalParagraphs"] = Clone(typography["totalParagraphs"]) });
         foreach (var style in Objects(typography["styles"]))
         {
             var details = new JsonObject { ["style"] = Clone(style["name"]), ["styleId"] = Clone(style["id"]) };
             if (Json.Long(style, "overridden") is > 0)
-                yield return Issue("STYLE_OVERRIDE", "warning", "Des paragraphes portent des remplacements locaux par rapport à leur style.", Json.Merge((JsonObject)details.DeepClone(),
+                yield return Issue("STYLE_OVERRIDE", "warning", Strings.T("Paragraphs carry local overrides of their style.", "Des paragraphes portent des remplacements locaux par rapport à leur style."), Json.Merge((JsonObject)details.DeepClone(),
                     new JsonObject { ["paragraphs"] = Clone(style["overridden"]), ["storyIds"] = Clone(style["overriddenStoryIds"]) }));
             if ((style["pointSizes"] as JsonArray)?.Count > 1)
-                yield return Issue("INCONSISTENT_POINT_SIZE", "warning", "Un même style de paragraphe est rendu dans plusieurs corps.", Json.Merge((JsonObject)details.DeepClone(),
+                yield return Issue("INCONSISTENT_POINT_SIZE", "warning", Strings.T("One paragraph style is rendered at several point sizes.", "Un même style de paragraphe est rendu dans plusieurs corps."), Json.Merge((JsonObject)details.DeepClone(),
                     new JsonObject { ["pointSizes"] = Clone(style["pointSizes"]), ["storyIds"] = Clone(style["storyIds"]) }));
             if ((style["leadings"] as JsonArray)?.Count > 1)
-                yield return Issue("INCONSISTENT_LEADING", "warning", "Un même style de paragraphe est rendu avec plusieurs interlignages.", Json.Merge((JsonObject)details.DeepClone(),
+                yield return Issue("INCONSISTENT_LEADING", "warning", Strings.T("One paragraph style is rendered with several leadings.", "Un même style de paragraphe est rendu avec plusieurs interlignages."), Json.Merge((JsonObject)details.DeepClone(),
                     new JsonObject { ["leadings"] = Clone(style["leadings"]), ["storyIds"] = Clone(style["storyIds"]) }));
         }
         if (Json.Long(typography["unstyled"], "paragraphs") is > 0)
-            yield return Issue("UNSTYLED_TEXT", "warning", "Du texte reste dans le style par défaut ([Paragraphe standard] ou [Sans style de paragraphe]).",
+            yield return Issue("UNSTYLED_TEXT", "warning", Strings.T("Some text keeps the default style ([Basic Paragraph] or [No Paragraph Style]).", "Du texte reste dans le style par défaut ([Paragraphe standard] ou [Sans style de paragraphe])."),
                 new JsonObject { ["paragraphs"] = Clone(typography["unstyled"]?["paragraphs"]), ["storyIds"] = Clone(typography["unstyled"]?["storyIds"]) });
         if (Json.Long(typography["tightLeading"], "paragraphs") is > 0)
-            yield return Issue("LEADING_TIGHTER_THAN_SIZE", "warning", "L’interlignage de paragraphes est inférieur à leur corps (lignes qui se chevauchent).",
+            yield return Issue("LEADING_TIGHTER_THAN_SIZE", "warning", Strings.T("The leading of paragraphs is below their point size (overlapping lines).", "L’interlignage de paragraphes est inférieur à leur corps (lignes qui se chevauchent)."),
                 new JsonObject { ["paragraphs"] = Clone(typography["tightLeading"]?["paragraphs"]), ["storyIds"] = Clone(typography["tightLeading"]?["storyIds"]) });
     }
 
     public static JsonObject Analyze(JsonObject snapshot, JsonObject? contract)
     {
         if (snapshot["document"] is null || snapshot["pages"] is not JsonArray pages || snapshot["items"] is not JsonArray items)
-            throw new ToolError("LAYOUT_SNAPSHOT_INVALID", "Le diagnostic InDesign ne respecte pas le contrat de workflow.");
+            throw new ToolError("LAYOUT_SNAPSHOT_INVALID", Strings.T("The InDesign diagnosis does not follow the workflow contract.", "Le diagnostic InDesign ne respecte pas le contrat de workflow."));
         var system = snapshot["designSystem"] as JsonObject;
         int Count(JsonNode? node) => (node as JsonArray)?.Count ?? 0;
         return new JsonObject

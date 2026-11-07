@@ -45,6 +45,7 @@ public sealed class ProtocolTests
     [Fact]
     public async Task Invalid_arguments_and_unknown_tools_are_refused()
     {
+        using var language = new DisplayLanguage("en-US");
         using var sandbox = new Sandbox();
         var responses = await Exchange(sandbox,
             new JsonObject { ["jsonrpc"] = "2.0", ["id"] = 1, ["method"] = "tools/call", ["params"] = new JsonObject { ["name"] = "nope", ["arguments"] = new JsonObject() } },
@@ -61,7 +62,7 @@ public sealed class ProtocolTests
             new JsonObject { ["jsonrpc"] = "2.0", ["id"] = 4, ["method"] = "resources/list" });
         Assert.Equal(-32602, Json.Long(responses[0]["error"], "code"));
         Assert.True(Json.IsTrue(responses[1]["result"], "isError"));
-        Assert.Contains("Paramètres invalides", responses[1]["result"]!["content"]![0]!["text"]!.GetValue<string>());
+        Assert.Contains("Invalid arguments", responses[1]["result"]!["content"]![0]!["text"]!.GetValue<string>());
         Assert.True(Json.IsTrue(responses[2]["result"], "isError"));
         Assert.Equal(-32601, Json.Long(responses[3]["error"], "code"));
         Assert.Empty(sandbox.InDesign.Runs);

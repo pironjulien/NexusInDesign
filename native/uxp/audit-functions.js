@@ -107,7 +107,7 @@ async function auditNativePath(doc) {
   return null;
 }
 function auditTypography(doc, limit) {
-  // Lecture seule : paragraphes regroupés par style (corps, interlignage, remplacements locaux), sans le texte lui-même.
+  // Read only: paragraphs grouped by style (point size, leading, local overrides), without the text itself.
   const leadingEnum = indesign.Leading || {};
   const autoLeading = leadingEnum.AUTO !== undefined ? leadingEnum.AUTO : leadingEnum.auto;
   const round = (value) => Math.round(Number(value) * 100) / 100;

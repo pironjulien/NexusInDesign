@@ -6,8 +6,8 @@
     const candidate = app.documents.item(index);
     if (candidate && candidate.isValid !== false && Number(candidate.id) === wanted) { doc = candidate; break; }
   }
-  if (!doc) { const error = new Error("Document introuvable"); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
-  if (app.modalState) { const error = new Error("InDesign affiche une boîte de dialogue modale"); error.code = "INDESIGN_MODAL"; throw error; }
+  if (!doc) { const error = new Error(__t("Document not found", "Document introuvable")); error.code = "DOCUMENT_NOT_FOUND"; throw error; }
+  if (app.modalState) { const error = new Error(__t("InDesign shows a modal dialog", "InDesign affiche une boîte de dialogue modale")); error.code = "INDESIGN_MODAL"; throw error; }
   const rawRevision = doc.extractLabel("fr.pironjulien.indesign.mcp.revision");
   const parsedRevision = Number.parseInt(rawRevision || "0", 10);
   const revision = Number.isInteger(parsedRevision) && parsedRevision >= 0 ? parsedRevision : 0;
@@ -122,9 +122,9 @@
     try { unitPreferences.horizontalMeasurementUnits = previousHorizontal; } catch (_) {}
     try { unitPreferences.verticalMeasurementUnits = previousVertical; } catch (_) {}
   }
-  if (!doc || doc.isValid === false) { const error = new Error("Le document a été fermé pendant l’audit"); error.code = "DOCUMENT_CHANGED_DURING_READ"; throw error; }
+  if (!doc || doc.isValid === false) { const error = new Error(__t("The document was closed during the audit", "Le document a été fermé pendant l’audit")); error.code = "DOCUMENT_CHANGED_DURING_READ"; throw error; }
   const stateAfter = documentStateToken(doc);
-  if (stateAfter !== stateBefore) { const error = new Error("Le document a changé pendant l’audit"); error.code = "DOCUMENT_CHANGED_DURING_READ"; throw error; }
+  if (stateAfter !== stateBefore) { const error = new Error(__t("The document changed during the audit", "Le document a changé pendant l’audit")); error.code = "DOCUMENT_CHANGED_DURING_READ"; throw error; }
   audit.stateToken = stateAfter;
   let serialized = JSON.stringify({ ok: true, audit });
   if (serialized.length > @@resultBudget@@ && audit.items.length > 0) {
@@ -147,5 +147,5 @@
     audit.truncationReason = "result-size";
     serialized = JSON.stringify({ ok: true, audit });
   }
-  if (serialized.length > @@resultBudget@@) { const error = new Error("L’audit dépasse la limite de résultat même sans les objets de page"); error.code = "AUDIT_RESULT_TOO_LARGE"; throw error; }
+  if (serialized.length > @@resultBudget@@) { const error = new Error(__t("The audit exceeds the result limit even without the page items", "L’audit dépasse la limite de résultat même sans les objets de page")); error.code = "AUDIT_RESULT_TOO_LARGE"; throw error; }
   await __writeResult(JSON.parse(serialized));

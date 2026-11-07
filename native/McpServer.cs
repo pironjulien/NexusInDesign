@@ -73,13 +73,13 @@ internal sealed class McpServer(Application application)
                     ["protocolVersion"] = Protocols.Contains(requested) ? requested : Protocols[^1],
                     ["capabilities"] = new JsonObject { ["tools"] = new JsonObject() },
                     ["serverInfo"] = new JsonObject { ["name"] = "nexus-indesign", ["version"] = Program.Version },
-                    ["instructions"] = Application.Instructions,
+                    ["instructions"] = Strings.Instructions,
                 });
             }
             case "ping":
                 return Result(id, []);
             case "tools/list":
-                return Result(id, new JsonObject { ["tools"] = application.Catalog.PublicList() });
+                return Result(id, new JsonObject { ["tools"] = application.Catalog.PublicList(Strings.French) });
             case "tools/call":
             {
                 var parameters = request["params"] as JsonObject;

@@ -1,9 +1,11 @@
 <Project>
-  <!-- Every build output of the engine goes to ~\.nexus\build\nexusindesign\native: never into OneDrive or AppData. -->
+  <!-- Every build output of the engine goes to ~\.nexus\build\nexusindesign\native: never into OneDrive or AppData.
+       The user profile comes from .NET, not $(USERPROFILE): Dependabot restores on Linux, where USERPROFILE is unset
+       and '/.nexus' at the file system root is denied, so its NuGet updates silently found nothing. -->
   <PropertyGroup>
-    <NexusBuild Condition="'$(NexusBuild)' == ''">$(USERPROFILE)\.nexus\build\nexusindesign\</NexusBuild>
-    <BaseOutputPath>$(NexusBuild)native\bin\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(NexusBuild)native\obj\</BaseIntermediateOutputPath>
+    <NexusBuild Condition="'$(NexusBuild)' == ''">$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.UserProfile)), '.nexus', 'build', 'nexusindesign'))))</NexusBuild>
+    <BaseOutputPath>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine('$(NexusBuild)', 'native', 'bin'))))</BaseOutputPath>
+    <BaseIntermediateOutputPath>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine('$(NexusBuild)', 'native', 'obj'))))</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
   </PropertyGroup>
   <!-- Strict build: the recommended .NET analyzers and the code style rules of .editorconfig, every warning an error. -->

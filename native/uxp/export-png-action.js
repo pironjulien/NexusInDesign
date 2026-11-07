@@ -15,15 +15,15 @@
   const rangeEnum = indesign.PNGExportRangeEnum || indesign.ExportRangeOrAllPages;
   const exportRange = rangeEnum && (rangeEnum.EXPORT_RANGE !== undefined ? rangeEnum.EXPORT_RANGE : rangeEnum.exportRange);
   const pngFormat = indesign.ExportFormat && (indesign.ExportFormat.PNG_FORMAT !== undefined ? indesign.ExportFormat.PNG_FORMAT : indesign.ExportFormat.pngFormat);
-  if (exportRange === undefined || pngFormat === undefined) { const error = new Error("L’API d’export PNG est indisponible"); error.code = "INDESIGN_API_UNAVAILABLE"; throw error; }
+  if (exportRange === undefined || pngFormat === undefined) { const error = new Error(__t("The PNG export API is unavailable", "L’API d’export PNG est indisponible")); error.code = "INDESIGN_API_UNAVAILABLE"; throw error; }
   const parsePageIndexes = (value, pageCount) => {
     if (String(value).trim().toLowerCase() === "all") return Array.from({ length: pageCount }, (_, index) => index);
     const indexes = new Set();
     for (const token of String(value).split(",")) {
       const match = /^(\d+)(?:-(\d+))?$/.exec(token.trim());
-      if (!match) { const error = new Error("La plage de pages PNG est invalide"); error.code = "PAGE_RANGE_INVALID"; throw error; }
+      if (!match) { const error = new Error(__t("The PNG page range is invalid", "La plage de pages PNG est invalide")); error.code = "PAGE_RANGE_INVALID"; throw error; }
       const start = Number(match[1]); const end = Number(match[2] || match[1]);
-      if (start < 1 || end < start || end > pageCount) { const error = new Error("La plage de pages PNG sort du document"); error.code = "PAGE_RANGE_INVALID"; throw error; }
+      if (start < 1 || end < start || end > pageCount) { const error = new Error(__t("The PNG page range is outside the document", "La plage de pages PNG sort du document")); error.code = "PAGE_RANGE_INVALID"; throw error; }
       for (let page = start; page <= end; page += 1) indexes.add(page - 1);
     }
     return [...indexes].sort((left, right) => left - right);
@@ -43,7 +43,7 @@
     if (requestedPageId !== null) {
       let page = null;
       for (let index = 0; index < exportDocument.pages.length; index += 1) { const candidate = exportDocument.pages.item(index); if (Number(candidate.id) === requestedPageId) { page = candidate; break; } }
-      if (!page) { const error = new Error("Page introuvable"); error.code = "PAGE_NOT_FOUND"; throw error; }
+      if (!page) { const error = new Error(__t("Page not found", "Page introuvable")); error.code = "PAGE_NOT_FOUND"; throw error; }
       preferences.pageString = "+" + String(Number(page.documentOffset) + 1);
       exportStarted = true;
       await exportDocument.exportFile(pngFormat, singleFilePath, false);

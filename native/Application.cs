@@ -15,8 +15,6 @@ namespace NexusInDesign;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "One instance for the server's whole life; its SemaphoreSlim never allocates a wait handle (AvailableWaitHandle is unused).")]
 internal sealed class Application
 {
-    public const string Instructions = "Ce serveur donne à l’agent (Codex ou Claude Code) un accès complet et contrôlé à Adobe InDesign, uniquement par le canal silencieux (COM et UXP, sans panneau, plugin ni réseau). Voie normale : silent_status, silent_list_documents, open_document (qui renvoie documentId, revision et stateToken), puis run_layout_script pour chaque changement cohérent : en un seul passage, il contrôle l’état, sauvegarde tous les documents ouverts, exécute le script UXP, enregistre si demandé et rend un aperçu PNG à regarder. Il renvoie la nouvelle revision et le nouveau stateToken : enchaînez sans réinspecter. Un échec du script renvoie scriptOk=false et backupId (silent_restore_backup), sans bloquer la suite. Regroupez le travail en peu d’appels. Si le projet possède un générateur ou des scripts versionnés, ils restent la source de vérité ; passez leur contenu à run_layout_script.\n\nFinalisez avec preflight_document puis finalize_layout ou export_pdf, et fermez avec silent_close_document. Le code libre (run_layout_script, execute_uxp_silent) a les permissions système et réseau complètes des scripts Adobe : n’exécutez que du code décidé pour la tâche. Les chemins des outils structurés restent bornés. Toutes les commandes InDesign passent par une file commune, sont sauvegardées et auditées sans journaliser le code ni le contenu. Après une issue inconnue, consultez silent_operation_status ; si elle reste orpheline, silent_reconcile_unknown_operation avant toute nouvelle mutation (redémarrez InDesign s’il le demande).";
-
     private static readonly HashSet<string> StructuredReads = ["get_document_info", "list_pages", "get_links", "get_fonts", "get_overset_text", "get_images"];
     private static readonly HashSet<string> StateGuardedRoutes = ["silent-direct", "workflow"];
 
@@ -50,7 +48,7 @@ internal sealed class Application
         string auditFile = Path.Combine(auditDirectory, Path.GetFileName(config.AuditFile));
         using (new FileStream(auditFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { }
         if (new FileInfo(auditFile).Attributes.HasFlag(FileAttributes.ReparsePoint))
-            throw new ToolError("CONFIG_INVALID", "Le journal interne ne peut pas être un lien.");
+            throw new ToolError("CONFIG_INVALID", Strings.T("The internal journal cannot be a link.", "Le journal interne ne peut pas être un lien."));
         PrivateAcl.Protect(auditFile, directory: false);
         audit = new AuditLogger(auditFile);
         PrivateAcl.PrepareDirectory(config.BackupRoot);
@@ -74,7 +72,7 @@ internal sealed class Application
 
     private SilentBridge Silent() => bridgeError is null && bridge is not null
         ? bridge
-        : throw new ToolError("SILENT_CHANNEL_UNAVAILABLE", $"Le canal silencieux est indisponible : {bridgeError?.Message}");
+        : throw new ToolError("SILENT_CHANNEL_UNAVAILABLE", Strings.T($"The silent channel is unavailable: {bridgeError?.Message}", $"Le canal silencieux est indisponible : {bridgeError?.Message}"));
 
     // ----- MCP tool call ---------------------------------------------------------------------------------------------
 
@@ -82,9 +80,9 @@ internal sealed class Application
     {
         var started = Stopwatch.StartNew();
         var tool = Catalog.Find(name);
-        if (tool is null) return Error(new ToolError("TOOL_UNKNOWN", $"Outil inconnu : {name}"));
+        if (tool is null) return Error(new ToolError("TOOL_UNKNOWN", Strings.T($"Unknown tool: {name}", $"Outil inconnu : {name}")));
         var args = (JsonObject)arguments.DeepClone();
-        if (ToolCatalog.Validate(tool, args) is { } invalid) return Error(new ToolError("ARGUMENTS_INVALID", $"Paramètres invalides : {invalid}"));
+        if (ToolCatalog.Validate(tool, args) is { } invalid) return Error(new ToolError("ARGUMENTS_INVALID", Strings.T($"Invalid arguments: {invalid}", $"Paramètres invalides : {invalid}")));
         long? documentId = Json.Long(args, "documentId"), revision = Json.Long(args, "expectedRevision");
         string? reason = Json.Str(args, "reason");
         try
@@ -106,14 +104,14 @@ internal sealed class Application
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return Error(new ToolError("AUDIT_UNAVAILABLE", "la commande n’a pas été envoyée à InDesign car le journal de début est indisponible."));
+            return Error(new ToolError("AUDIT_UNAVAILABLE", Strings.T("the command was not sent to InDesign because the start journal is unavailable.", "la commande n’a pas été envoyée à InDesign car le journal de début est indisponible.")));
         }
 
         JsonObject result;
         try
         {
             if (Interlocked.Increment(ref queued) > config.MaxQueueLength)
-                throw new ToolError("QUEUE_FULL", "La file des commandes InDesign est pleine.");
+                throw new ToolError("QUEUE_FULL", Strings.T("The InDesign command queue is full.", "La file des commandes InDesign est pleine."));
             await queue.WaitAsync().ConfigureAwait(false);
             try
             {
@@ -151,7 +149,7 @@ internal sealed class Application
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            result["auditWarning"] ??= "Le résultat InDesign est valide, mais l’événement final n’a pas pu être écrit dans le journal d’audit.";
+            result["auditWarning"] ??= Strings.T("The InDesign result is valid, but the final event could not be written to the audit journal.", "Le résultat InDesign est valide, mais l’événement final n’a pas pu être écrit dans le journal d’audit.");
         }
         var previews = Thumbnails.PreviewPaths(name, result);
         var images = previews.Take(Thumbnails.MaxImages).Select(Thumbnails.Image).OfType<JsonObject>().ToList();
@@ -199,14 +197,14 @@ internal sealed class Application
 
     private void ApplyPathPolicy(ToolContract tool, JsonObject args)
     {
-        var policy = pathPolicy ?? throw new ToolError("SERVER_NOT_STARTED", "Le serveur n’est pas démarré.");
+        var policy = pathPolicy ?? throw new ToolError("SERVER_NOT_STARTED", Strings.T("The server is not started.", "Le serveur n’est pas démarré."));
         foreach (var rule in tool.PathRules)
         {
             if (Json.Str(args, rule.Field) is not { } value) continue;
             string checkedPath = rule.Access == "read" ? policy.ValidateRead(value, rule.Extensions, rule.Kind) : policy.ValidateWrite(value, rule.Extensions, rule.Kind);
             args[rule.Field] = checkedPath;
             if (rule.Access == "write" && rule.MustNotExist && (File.Exists(checkedPath) || Directory.Exists(checkedPath)))
-                throw new ToolError("TARGET_EXISTS", "La cible existe déjà ; l’écrasement implicite est refusé.");
+                throw new ToolError("TARGET_EXISTS", Strings.T("The target already exists; implicit overwriting is refused.", "La cible existe déjà ; l’écrasement implicite est refusé."));
         }
     }
 
@@ -229,7 +227,7 @@ internal sealed class Application
         var inspected = await Silent().InspectDocument(documentId).ConfigureAwait(false);
         if (inspected["document"] is not JsonObject document || Json.Long(document, "documentId") != documentId || Json.Long(document, "revision") is not >= 0
             || !Json.StateToken().IsMatch(Json.Str(document, "stateToken") ?? ""))
-            throw new ToolError("DOCUMENT_STATE_INVALID", "L’inspection silencieuse du document a renvoyé un état invalide.");
+            throw new ToolError("DOCUMENT_STATE_INVALID", Strings.T("The silent inspection of the document returned an invalid state.", "L’inspection silencieuse du document a renvoyé un état invalide."));
         return document;
     }
 
@@ -240,11 +238,11 @@ internal sealed class Application
         {
             var inspected = await InspectState(Json.Long(args, "documentId")!.Value).ConfigureAwait(false);
             if (Json.Long(inspected, "revision") != Json.Long(args, "expectedRevision"))
-                throw new ToolError("REVISION_CONFLICT", "Le document a changé depuis la dernière lecture.");
+                throw new ToolError("REVISION_CONFLICT", Strings.T("The document changed since the last read.", "Le document a changé depuis la dernière lecture."));
             if (Json.Str(args, "expectedStateToken") is not { } token || !Json.StateToken().IsMatch(token))
-                throw new ToolError("STATE_TOKEN_REQUIRED", "Le stateToken observé avant la mutation est obligatoire.");
+                throw new ToolError("STATE_TOKEN_REQUIRED", Strings.T("The stateToken observed before the mutation is required.", "Le stateToken observé avant la mutation est obligatoire."));
             if (Json.Str(inspected, "stateToken") != token)
-                throw new ToolError("STATE_CONFLICT", "Le contenu ou la structure du document a changé depuis la dernière inspection.");
+                throw new ToolError("STATE_CONFLICT", Strings.T("The content or structure of the document changed since the last inspection.", "Le contenu ou la structure du document a changé depuis la dernière inspection."));
             verified = token;
         }
         var result = Json.AsObject(await Dispatch(tool, args, verified).ConfigureAwait(false));
@@ -264,12 +262,12 @@ internal sealed class Application
             throw error;
         }
         if (expectedRevision is not null && Json.Long(after, "revision") != expectedRevision)
-            throw new ToolError("REVISION_RESULT_MISMATCH", "La révision relue après la commande ne correspond pas au résultat InDesign.", true);
+            throw new ToolError("REVISION_RESULT_MISMATCH", Strings.T("The revision read back after the command does not match the InDesign result.", "La révision relue après la commande ne correspond pas au résultat InDesign."), true);
         string? reported = tokenField is null ? Json.Str(result, "stateToken") ?? Json.Str(nested, "stateToken") : Json.Str(result, tokenField);
         if (tool.Route == "silent-direct" && !Json.StateToken().IsMatch(reported ?? ""))
-            throw new ToolError("DOCUMENT_STATE_INVALID", "Le canal d’exécution n’a pas renvoyé le stateToken obligatoire après la commande.", true);
+            throw new ToolError("DOCUMENT_STATE_INVALID", Strings.T("The execution channel did not return the required stateToken after the command.", "Le canal d’exécution n’a pas renvoyé le stateToken obligatoire après la commande."), true);
         if (reported is not null && reported != Json.Str(after, "stateToken"))
-            throw new ToolError("STATE_VERIFICATION_FAILED", "Le stateToken renvoyé ne correspond pas à l’état relu dans InDesign.", true);
+            throw new ToolError("STATE_VERIFICATION_FAILED", Strings.T("The returned stateToken does not match the state read back in InDesign.", "Le stateToken renvoyé ne correspond pas à l’état relu dans InDesign."), true);
         result["stateToken"] = Json.Str(after, "stateToken");
         if (tokenField is not null) result[tokenField] = Json.Str(after, "stateToken");
         return result;
@@ -286,7 +284,7 @@ internal sealed class Application
             case "search_official_dom": return DomIndex.Search(Json.Str(args, "query") ?? "", (int)(Json.Long(args, "limit") ?? 10));
             case "silent_status":
                 if (bridgeError is not null || bridge is null)
-                    return new JsonObject { ["available"] = false, ["mode"] = "silent-com-uxp", ["message"] = "Le canal silencieux est indisponible.", ["code"] = bridgeError?.Code };
+                    return new JsonObject { ["available"] = false, ["mode"] = "silent-com-uxp", ["message"] = Strings.T("The silent channel is unavailable.", "Le canal silencieux est indisponible."), ["code"] = bridgeError?.Code };
                 try
                 {
                     var status = await bridge.Status().ConfigureAwait(false);
@@ -301,7 +299,7 @@ internal sealed class Application
                     return new JsonObject
                     {
                         ["available"] = false, ["mode"] = "silent-com-uxp", ["code"] = error.Code,
-                        ["message"] = error.Code == "MUTATION_IN_PROGRESS" ? error.Message : "InDesign ne répond pas par COM.",
+                        ["message"] = error.Code == "MUTATION_IN_PROGRESS" ? error.Message : Strings.T("InDesign does not answer over COM.", "InDesign ne répond pas par COM."),
                         ["operationId"] = error.OperationId,
                     };
                 }
@@ -335,24 +333,24 @@ internal sealed class Application
         if (StructuredReads.Contains(tool.Name)) return await Silent().ReadDocument(tool.Name, Id()).ConfigureAwait(false);
         if (tool.Route == "workflow") return await DispatchWorkflow(tool, args, verifiedToken).ConfigureAwait(false);
         if (tool.Route == "silent-direct") return await DispatchDirect(tool.Name, args, verifiedToken).ConfigureAwait(false);
-        throw new ToolError("TOOL_ROUTE_UNKNOWN", $"Route inconnue pour {tool.Name}.");
+        throw new ToolError("TOOL_ROUTE_UNKNOWN", Strings.T($"Unknown route for {tool.Name}.", $"Route inconnue pour {tool.Name}."));
     }
 
     private static double[] Numbers(JsonNode? node) => (node as JsonArray ?? []).Select(entry => Json.Number(entry) ?? double.NaN).ToArray();
 
     private static long ExpectedPageCount(string? pageRange, long pageCount)
     {
-        if (pageCount < 1) throw new ToolError("DOCUMENT_STATE_INVALID", "Le nombre de pages InDesign est invalide avant export.");
+        if (pageCount < 1) throw new ToolError("DOCUMENT_STATE_INVALID", Strings.T("The InDesign page count is invalid before export.", "Le nombre de pages InDesign est invalide avant export."));
         string value = (pageRange ?? "all").Trim().ToLowerInvariant();
         if (value == "all") return pageCount;
         var selected = new HashSet<long>();
         foreach (string token in value.Split(','))
         {
             var match = System.Text.RegularExpressions.Regex.Match(token.Trim(), @"^(\d+)(?:-(\d+))?$");
-            if (!match.Success) throw new ToolError("PAGE_RANGE_INVALID", "La plage de pages PNG est invalide.");
+            if (!match.Success) throw new ToolError("PAGE_RANGE_INVALID", Strings.T("The PNG page range is invalid.", "La plage de pages PNG est invalide."));
             long start = long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
             long end = match.Groups[2].Success ? long.Parse(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture) : start;
-            if (start < 1 || end < start || end > pageCount) throw new ToolError("PAGE_RANGE_INVALID", "La plage de pages PNG sort du document.");
+            if (start < 1 || end < start || end > pageCount) throw new ToolError("PAGE_RANGE_INVALID", Strings.T("The PNG page range is outside the document.", "La plage de pages PNG sort du document."));
             for (long page = start; page <= end; page++) selected.Add(page);
         }
         return selected.Count;
@@ -397,7 +395,7 @@ internal sealed class Application
         {
             if (Json.Str(protection, "targetBackupId") is not null) Directory.Delete(targetPath, recursive: true);
             if (Directory.Exists(targetPath) || File.Exists(targetPath))
-                throw new ToolError("TARGET_EXISTS", "La cible a été créée entre sa vérification et l’export ; aucun écrasement non protégé n’a eu lieu.");
+                throw new ToolError("TARGET_EXISTS", Strings.T("The target was created between its check and the export; no unprotected overwrite took place.", "La cible a été créée entre sa vérification et l’export ; aucun écrasement non protégé n’a eu lieu."));
             Directory.CreateDirectory(targetPath);
             createdDirectory = true;
         }
@@ -407,7 +405,7 @@ internal sealed class Application
         {
             var ready = await InspectState(documentId).ConfigureAwait(false);
             if (Json.Long(ready, "revision") != revision || Json.Str(ready, "stateToken") != token)
-                throw new ToolError("STATE_CONFLICT", "Le document a changé juste avant l’envoi de la commande à InDesign.");
+                throw new ToolError("STATE_CONFLICT", Strings.T("The document changed just before the command was sent to InDesign.", "Le document a changé juste avant l’envoi de la commande à InDesign."));
             JsonObject response = command is "save_document" or "save_as"
                 ? await silent.SaveDocument(documentId, revision, token, command == "save_as" ? targetPath : null).ConfigureAwait(false)
                 : await silent.ExportDocument(new SilentBridge.ExportRequest(command, documentId, revision, token)
@@ -434,7 +432,7 @@ internal sealed class Application
             var inner = response["result"] as JsonObject;
             var paths = (inner?["paths"] as JsonArray)?.Select(entry => entry?.GetValue<string>() ?? "").ToList();
             if (expectedPngCount is not null && (paths is null || paths.Count != expectedPngCount))
-                throw new ToolError("ARTIFACT_PAGE_COUNT_MISMATCH", $"InDesign a déclaré {paths?.Count ?? 0} PNG sur {expectedPngCount} attendus.");
+                throw new ToolError("ARTIFACT_PAGE_COUNT_MISMATCH", Strings.T($"InDesign reported {paths?.Count ?? 0} PNG of {expectedPngCount} expected.", $"InDesign a déclaré {paths?.Count ?? 0} PNG sur {expectedPngCount} attendus."));
             JsonObject? verification = artifactKind is not null && targetPath is not null ? ArtifactVerifier.Verify(targetPath, artifactKind, paths) : null;
             var output = Json.AsObject(inner?.DeepClone() ?? new JsonObject());
             output["documentId"] = Json.Long(response, "documentId") ?? documentId;
@@ -472,7 +470,7 @@ internal sealed class Application
         long documentId = Json.Long(args, "documentId")!.Value;
         var snapshot = await Silent().ReadDocument("analyze_layout", documentId, Json.Long(args, "maxItems")).ConfigureAwait(false);
         if (Json.Long(args, "expectedRevision") is long expected && Json.Long(snapshot, "revision") != expected)
-            throw new ToolError("REVISION_CONFLICT", "Le document a changé depuis la dernière lecture.");
+            throw new ToolError("REVISION_CONFLICT", Strings.T("The document changed since the last read.", "Le document a changé depuis la dernière lecture."));
         return LayoutWorkflow.Analyze(snapshot, args["contract"] as JsonObject);
     }
 
@@ -509,13 +507,13 @@ internal sealed class Application
                 afterArgs["expectedRevision"] = preview["revision"]?.DeepClone() ?? args["expectedRevision"]?.DeepClone();
                 var after = await CaptureLayout(afterArgs).ConfigureAwait(false);
                 if (Json.Str(before, "fingerprint") != Json.Str(after, "fingerprint"))
-                    throw new ToolError("PREVIEW_ROUND_TRIP_MISMATCH", "La mise en page a changé pendant la production de l’aperçu.", true) { PartialOutputPath = Json.Str(args, "folderPath") };
+                    throw new ToolError("PREVIEW_ROUND_TRIP_MISMATCH", Strings.T("The layout changed while the preview was produced.", "La mise en page a changé pendant la production de l’aperçu."), true) { PartialOutputPath = Json.Str(args, "folderPath") };
                 var output = new JsonObject { ["preview"] = preview, ["analysis"] = after, ["sourceUnchanged"] = true };
                 if (Json.IsTrue(args, "annotate"))
                     output["annotationLegend"] = new JsonObject
                     {
-                        ["margins"] = "cadre bleu clair", ["gutters"] = "bandes violettes", ["items"] = "contour bleu et étiquette jaune #id (id de analyze_layout)",
-                        ["overset"] = "contour rouge épais et étiquette rouge « excès »",
+                        ["margins"] = Strings.T("light blue frame", "cadre bleu clair"), ["gutters"] = Strings.T("purple bands", "bandes violettes"), ["items"] = Strings.T("blue outline and yellow #id label (analyze_layout id)", "contour bleu et étiquette jaune #id (id de analyze_layout)"),
+                        ["overset"] = Strings.T("thick red outline and red “overset” label", "contour rouge épais et étiquette rouge « excès »"),
                     };
                 return output;
             }
@@ -526,24 +524,24 @@ internal sealed class Application
                     return new JsonObject
                     {
                         ["exported"] = false, ["gate"] = "layout-contract",
-                        ["message"] = "Le PDF final n’a pas été produit car le contrat contient des écarts bloquants.", ["analysis"] = analysis,
+                        ["message"] = Strings.T("The final PDF was not produced because the contract has blocking deviations.", "Le PDF final n’a pas été produit car le contrat contient des écarts bloquants."), ["analysis"] = analysis,
                     };
                 var preflight = await Silent().PreflightDocument(Json.Long(args, "documentId")!.Value, Json.Long(args, "expectedRevision"),
                     Json.Str(args, "profileName"), Json.Long(args, "timeoutSeconds") ?? 60).ConfigureAwait(false);
                 if (preflight["aggregatedResults"] is not JsonArray aggregated || aggregated.Count < 3 || aggregated[2] is not JsonArray findings)
-                    throw new ToolError("PREFLIGHT_RESULT_INVALID", "Le contrôle Adobe n’a pas renvoyé sa structure de résultats officielle.");
+                    throw new ToolError("PREFLIGHT_RESULT_INVALID", Strings.T("The Adobe preflight did not return its official result structure.", "Le contrôle Adobe n’a pas renvoyé sa structure de résultats officielle."));
                 if (findings.Count > 0)
                     return new JsonObject
                     {
                         ["exported"] = false, ["gate"] = "adobe-preflight",
-                        ["message"] = "Le PDF final n’a pas été produit car le contrôle Adobe contient des erreurs.",
+                        ["message"] = Strings.T("The final PDF was not produced because the Adobe preflight has errors.", "Le PDF final n’a pas été produit car le contrôle Adobe contient des erreurs."),
                         ["analysis"] = analysis, ["preflight"] = preflight, ["preflightIssues"] = findings.Count,
                     };
                 var pdf = await DispatchDirect("export_pdf", Pick(args, "documentId", "expectedRevision", "expectedStateToken", "reason", "filePath", "presetName", "overwrite"), verifiedToken).ConfigureAwait(false);
                 return new JsonObject { ["exported"] = true, ["gate"] = "passed", ["analysis"] = analysis, ["preflight"] = preflight, ["pdf"] = pdf };
             }
             default:
-                throw new ToolError("WORKFLOW_UNKNOWN", $"Workflow inconnu : {tool.Name}");
+                throw new ToolError("WORKFLOW_UNKNOWN", Strings.T($"Unknown workflow: {tool.Name}", $"Workflow inconnu : {tool.Name}"));
         }
     }
 
@@ -561,7 +559,7 @@ internal sealed class Application
     {
         static JsonObject Check(string id, string status, JsonObject? details = null) =>
             Json.Merge(new JsonObject { ["id"] = id, ["status"] = status }, details);
-        var tools = Catalog.PublicList();
+        var tools = Catalog.PublicList(french: false);
         string registryHash = Json.Sha256(Json.Canonical(tools));
         JsonObject officialDom;
         try { officialDom = Json.Merge(new JsonObject { ["available"] = true }, DomIndex.Info()); }
@@ -589,8 +587,8 @@ internal sealed class Application
         bool failure = checks.OfType<JsonObject>().Any(entry => Json.Str(entry, "status") == "fail");
         var nextActions = new JsonArray();
         nextActions.Add(silentAvailable
-            ? "Utiliser silent_status pour vérifier le processus InDesign réel ; le doctor local ne démarre jamais InDesign."
-            : "Réparer le canal silencieux (stockage privé, runtime) avant toute exécution.");
+            ? Strings.T("Use silent_status to check the real InDesign process; the local doctor never starts InDesign.", "Utiliser silent_status pour vérifier le processus InDesign réel ; le doctor local ne démarre jamais InDesign.")
+            : Strings.T("Repair the silent channel (private storage, runtime) before any run.", "Réparer le canal silencieux (stockage privé, runtime) avant toute exécution."));
         return new JsonObject
         {
             ["status"] = failure ? "error" : silentAvailable ? "ready-unverified" : "degraded",

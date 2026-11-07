@@ -37,13 +37,13 @@ internal sealed record Config
         string privateRoot = Absolute(Env("INDESIGN_MCP_PRIVATE_ROOT") ?? Path.Combine(installRoot, "private"), "INDESIGN_MCP_PRIVATE_ROOT");
         string? oneDrive = Env("OneDrive");
         if (oneDrive is { Length: > 0 } && Path.IsPathFullyQualified(oneDrive) && PathPolicy.IsInside(Path.GetFullPath(oneDrive), privateRoot))
-            throw new ToolError("CONFIG_INVALID", "Le stockage privé InDesign doit rester hors OneDrive (INDESIGN_MCP_PRIVATE_ROOT).");
+            throw new ToolError("CONFIG_INVALID", Strings.T("The InDesign private storage must stay outside OneDrive (INDESIGN_MCP_PRIVATE_ROOT).", "Le stockage privé InDesign doit rester hors OneDrive (INDESIGN_MCP_PRIVATE_ROOT)."));
         string backupRoot = Absolute(Env("INDESIGN_MCP_BACKUP_ROOT") ?? Path.Combine(privateRoot, "backups"), "INDESIGN_MCP_BACKUP_ROOT");
-        if (!PathPolicy.IsInside(privateRoot, backupRoot)) throw new ToolError("CONFIG_INVALID", "INDESIGN_MCP_BACKUP_ROOT doit rester dans le stockage privé.");
+        if (!PathPolicy.IsInside(privateRoot, backupRoot)) throw new ToolError("CONFIG_INVALID", Strings.T("INDESIGN_MCP_BACKUP_ROOT must stay inside the private storage.", "INDESIGN_MCP_BACKUP_ROOT doit rester dans le stockage privé."));
         string auditFile = Absolute(Env("INDESIGN_MCP_AUDIT_FILE") ?? Path.Combine(privateRoot, "audit", "events.jsonl"), "INDESIGN_MCP_AUDIT_FILE");
-        if (!PathPolicy.IsInside(privateRoot, auditFile)) throw new ToolError("CONFIG_INVALID", "INDESIGN_MCP_AUDIT_FILE doit rester dans le stockage privé.");
+        if (!PathPolicy.IsInside(privateRoot, auditFile)) throw new ToolError("CONFIG_INVALID", Strings.T("INDESIGN_MCP_AUDIT_FILE must stay inside the private storage.", "INDESIGN_MCP_AUDIT_FILE doit rester dans le stockage privé."));
         if (Path.GetExtension(auditFile).ToLowerInvariant() is not (".jsonl" or ".log"))
-            throw new ToolError("CONFIG_INVALID", "Le journal interne doit être un fichier .jsonl ou .log.");
+            throw new ToolError("CONFIG_INVALID", Strings.T("The internal journal must be a .jsonl or .log file.", "Le journal interne doit être un fichier .jsonl ou .log."));
 
         var readRoots = Roots(Env("INDESIGN_MCP_READ_ROOTS"), settings["readRoots"]) ?? [profile];
         var writeRoots = Roots(Env("INDESIGN_MCP_WRITE_ROOTS"), settings["writeRoots"]) ?? [profile];
@@ -68,7 +68,7 @@ internal sealed record Config
         ];
 
         if (Env("INDESIGN_MCP_TOOL_PROFILE") is { Length: > 0 } toolProfile && toolProfile != "core")
-            throw new ToolError("CONFIG_INVALID", "Seul le profil core existe : les commandes historiques du plugin UXP ont été retirées en 4.0.0.");
+            throw new ToolError("CONFIG_INVALID", Strings.T("Only the core profile exists: the legacy UXP plugin commands were removed in 4.0.0.", "Seul le profil core existe : les commandes historiques du plugin UXP ont été retirées en 4.0.0."));
 
         return new Config
         {
@@ -92,7 +92,7 @@ internal sealed record Config
 
     private static string Absolute(string value, string name)
     {
-        if (!Path.IsPathFullyQualified(value)) throw new ToolError("CONFIG_INVALID", $"{name} doit désigner un chemin absolu.");
+        if (!Path.IsPathFullyQualified(value)) throw new ToolError("CONFIG_INVALID", Strings.T($"{name} must be an absolute path.", $"{name} doit désigner un chemin absolu."));
         return Path.GetFullPath(value);
     }
 
@@ -100,7 +100,7 @@ internal sealed record Config
     {
         if (string.IsNullOrEmpty(value)) return fallback;
         if (!long.TryParse(value, out long parsed) || parsed < min || parsed > max)
-            throw new ToolError("CONFIG_INVALID", $"{name} doit être un entier entre {min} et {max}.");
+            throw new ToolError("CONFIG_INVALID", Strings.T($"{name} must be an integer between {min} and {max}.", $"{name} doit être un entier entre {min} et {max}."));
         return parsed;
     }
 
@@ -115,7 +115,7 @@ internal sealed record Config
         if (items is null) return null;
         var list = items.Select(item => Environment.ExpandEnvironmentVariables(item)).Where(item => item.Length > 0).ToList();
         if (list.Count == 0 || list.Any(item => !Path.IsPathFullyQualified(item)))
-            throw new ToolError("CONFIG_INVALID", "Les racines configurées doivent être des chemins absolus.");
+            throw new ToolError("CONFIG_INVALID", Strings.T("The configured roots must be absolute paths.", "Les racines configurées doivent être des chemins absolus."));
         return list.Select(Path.GetFullPath).ToList();
     }
 
@@ -128,7 +128,7 @@ internal sealed record Config
         }
         catch (Exception exception) when (exception is System.Text.Json.JsonException or InvalidOperationException)
         {
-            throw new ToolError("CONFIG_INVALID", $"settings.json est illisible : {exception.Message}");
+            throw new ToolError("CONFIG_INVALID", Strings.T($"settings.json is unreadable: {exception.Message}", $"settings.json est illisible : {exception.Message}"));
         }
     }
 }

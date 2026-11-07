@@ -28,8 +28,8 @@ internal sealed partial class SilentBridge
 
     public SilentBridge(IInDesignHost host, string backupDirectory, string runtimeRoot, TimeSpan timeout, long maxResultBytes)
     {
-        if (!Path.IsPathFullyQualified(backupDirectory)) throw new ArgumentException("backupDirectory absolu requis.");
-        if (!Path.IsPathFullyQualified(runtimeRoot)) throw new ArgumentException("runtimeRoot absolu requis.");
+        if (!Path.IsPathFullyQualified(backupDirectory)) throw new ArgumentException("backupDirectory must be absolute.");
+        if (!Path.IsPathFullyQualified(runtimeRoot)) throw new ArgumentException("runtimeRoot must be absolute.");
         this.host = host;
         BackupDirectory = backupDirectory;
         RuntimeRoot = runtimeRoot;
@@ -137,16 +137,16 @@ internal sealed partial class SilentBridge
         var info = new FileInfo(LeasePath);
         if (!info.Exists) return null;
         if (info.Attributes.HasFlag(FileAttributes.ReparsePoint) || info.Length > 16_384)
-            throw Fail("MUTATION_LEASE_INVALID", "Le verrou inter-processus InDesign est invalide.", true);
+            throw Fail("MUTATION_LEASE_INVALID", Strings.T("The cross-process InDesign lock is invalid.", "Le verrou inter-processus InDesign est invalide."), true);
         JsonObject? lease;
         try { lease = JsonNode.Parse(File.ReadAllText(LeasePath)) as JsonObject; }
         catch (Exception exception) when (exception is System.Text.Json.JsonException or IOException)
         {
-            throw Fail("MUTATION_LEASE_INVALID", "Le verrou inter-processus InDesign est illisible.", true);
+            throw Fail("MUTATION_LEASE_INVALID", Strings.T("The cross-process InDesign lock is unreadable.", "Le verrou inter-processus InDesign est illisible."), true);
         }
         if (lease is null || !Json.Uuid().IsMatch(Json.Str(lease, "operationId") ?? "") || !Json.Uuid().IsMatch(Json.Str(lease, "sessionId") ?? "")
             || Json.Long(lease, "schemaVersion") != 1)
-            throw Fail("MUTATION_LEASE_INVALID", "Le verrou inter-processus InDesign ne contient pas une opération et une session valides.", true);
+            throw Fail("MUTATION_LEASE_INVALID", Strings.T("The cross-process InDesign lock does not hold a valid operation and session.", "Le verrou inter-processus InDesign ne contient pas une opération et une session valides."), true);
         return lease;
     }
 
@@ -183,10 +183,10 @@ internal sealed partial class SilentBridge
                         continue;
                     }
                 }
-                throw Fail("MUTATION_IN_PROGRESS", "Une autre mutation InDesign est encore active ou son issue doit être réconciliée.", true, existingId);
+                throw Fail("MUTATION_IN_PROGRESS", Strings.T("Another InDesign mutation is still running or its outcome must be reconciled.", "Une autre mutation InDesign est encore active ou son issue doit être réconciliée."), true, existingId);
             }
         }
-        throw Fail("MUTATION_IN_PROGRESS", "Le verrou inter-processus InDesign n’a pas pu être acquis.", true);
+        throw Fail("MUTATION_IN_PROGRESS", Strings.T("The cross-process InDesign lock could not be acquired.", "Le verrou inter-processus InDesign n’a pas pu être acquis."), true);
     }
 
     private bool ReleaseLease(string operationId)
@@ -202,7 +202,7 @@ internal sealed partial class SilentBridge
     {
         var lease = ReadLease();
         if (lease is null || Json.Str(lease, "operationId") != operationId)
-            throw Fail("MUTATION_LEASE_MISMATCH", "Le verrou silencieux à compléter est absent ou a changé.", true, operationId);
+            throw Fail("MUTATION_LEASE_MISMATCH", Strings.T("The silent lock to complete is missing or changed.", "Le verrou silencieux à compléter est absent ou a changé."), true, operationId);
         change(lease);
         WriteAtomicPrivateJson(LeasePath, lease);
     }
@@ -229,7 +229,7 @@ internal sealed partial class SilentBridge
         var lease = ReadLease();
         if (lease is null) return;
         if (operationId is not null && Json.Str(lease, "operationId") == operationId) return;
-        throw Fail("MUTATION_IN_PROGRESS", "Une mutation InDesign est verrouillée par un lease durable ; consultez silent_operation_status puis réconciliez-la avant toute nouvelle commande.",
+        throw Fail("MUTATION_IN_PROGRESS", Strings.T("An InDesign mutation is locked by a durable lease; check silent_operation_status, then reconcile it before any new command.", "Une mutation InDesign est verrouillée par un lease durable ; consultez silent_operation_status puis réconciliez-la avant toute nouvelle commande."),
             true, Json.Str(lease, "operationId"));
     }
 
@@ -242,7 +242,7 @@ internal sealed partial class SilentBridge
         if (activeOperation.Value is { } active)
         {
             if (active != operationId)
-                throw Fail("SILENT_LEASE_CONTEXT_MISMATCH", "Une autre opération silencieuse est déjà active dans ce contexte.", true, active);
+                throw Fail("SILENT_LEASE_CONTEXT_MISMATCH", Strings.T("Another silent operation is already running in this context.", "Une autre opération silencieuse est déjà active dans ce contexte."), true, active);
             return await callback().ConfigureAwait(false);
         }
         AcquireLease(operationId);
@@ -292,9 +292,9 @@ internal sealed partial class SilentBridge
         try { output = raw is null ? null : JsonNode.Parse(raw) as JsonObject; }
         catch (System.Text.Json.JsonException)
         {
-            throw Fail("UXP_RESULT_INVALID", "InDesign a renvoyé un résultat UXP illisible.");
+            throw Fail("UXP_RESULT_INVALID", Strings.T("InDesign returned an unreadable UXP result.", "InDesign a renvoyé un résultat UXP illisible."));
         }
-        if (output is null) throw Fail("UXP_RESULT_INVALID", "InDesign n’a renvoyé aucun résultat UXP.");
+        if (output is null) throw Fail("UXP_RESULT_INVALID", Strings.T("InDesign returned no UXP result.", "InDesign n’a renvoyé aucun résultat UXP."));
         return CheckUxpResult(output);
     }
 
@@ -302,7 +302,7 @@ internal sealed partial class SilentBridge
     {
         if (Json.Bool(output, "ok") == false)
         {
-            throw new ToolError(Json.Str(output, "code") ?? "UXP_ERROR", Json.Str(output, "message") ?? "L’exécution InDesign a échoué.",
+            throw new ToolError(Json.Str(output, "code") ?? "UXP_ERROR", Json.Str(output, "message") ?? Strings.T("The InDesign run failed.", "L’exécution InDesign a échoué."),
                 Json.IsTrue(output, "requiresInspection"))
             { OperationId = Json.Str(output, "operationId") };
         }
@@ -345,7 +345,7 @@ internal sealed partial class SilentBridge
         }
         catch (ToolError error) when (error.Code == "UXP_OUTCOME_UNKNOWN")
         {
-            throw new ToolError("UXP_READ_OUTCOME_UNKNOWN", "La lecture UXP asynchrone n’a pas produit de résultat vérifiable.", error.RequiresInspection, error);
+            throw new ToolError("UXP_READ_OUTCOME_UNKNOWN", Strings.T("The asynchronous UXP read produced no verifiable result.", "La lecture UXP asynchrone n’a pas produit de résultat vérifiable."), error.RequiresInspection, error);
         }
         finally
         {
@@ -359,7 +359,7 @@ internal sealed partial class SilentBridge
         if (activeOperation.Value != operationId)
             return await WithMutationGuard(operationId, () => RunUxpTracked(template, body, inputs, operationId)).ConfigureAwait(false);
         if (pendingOperations.ContainsKey(operationId))
-            throw Fail("OPERATION_ALREADY_DISPATCHED", "Cette opération a déjà envoyé son script suivi à InDesign.", true, operationId);
+            throw Fail("OPERATION_ALREADY_DISPATCHED", Strings.T("This operation already sent its tracked script to InDesign.", "Cette opération a déjà envoyé son script suivi à InDesign."), true, operationId);
         string resultPath = Path.Combine(RuntimeDirectory, $"{operationId}.result.json");
         string scriptPath = Path.Combine(RuntimeDirectory, $"{operationId}.idjs");
         string source = UxpTemplates.AsyncScript(body, resultPath, MaxResultBytes, operationId);
@@ -415,9 +415,9 @@ internal sealed partial class SilentBridge
     {
         var info = new FileInfo(resultPath);
         if (!info.Exists) return new ResultState(true, null);
-        if (info.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw Fail("UXP_RESULT_INVALID", "Le fichier résultat UXP n’est pas un fichier privé normal.", true);
+        if (info.Attributes.HasFlag(FileAttributes.ReparsePoint)) throw Fail("UXP_RESULT_INVALID", Strings.T("The UXP result file is not a regular private file.", "Le fichier résultat UXP n’est pas un fichier privé normal."), true);
         Protect(resultPath);
-        if (info.Length > MaxResultBytes) throw Fail("RESULT_TOO_LARGE_AFTER_MUTATION", "Le résultat UXP dépasse la taille maximale autorisée.", true);
+        if (info.Length > MaxResultBytes) throw Fail("RESULT_TOO_LARGE_AFTER_MUTATION", Strings.T("The UXP result exceeds the maximum allowed size.", "Le résultat UXP dépasse la taille maximale autorisée."), true);
         try
         {
             return JsonNode.Parse(File.ReadAllText(resultPath)) is JsonObject result ? new ResultState(false, result) : new ResultState(true, null);
@@ -437,7 +437,7 @@ internal sealed partial class SilentBridge
             if (!state.Pending) return state.Result!;
             await Task.Delay(25).ConfigureAwait(false);
         }
-        throw Fail("UXP_OUTCOME_UNKNOWN", "Le délai UXP est dépassé ; l’issue peut être indéterminée. Inspectez le document avant toute nouvelle action.", true, operationId);
+        throw Fail("UXP_OUTCOME_UNKNOWN", Strings.T("The UXP timeout expired; the outcome may be unknown. Inspect the document before any new action.", "Le délai UXP est dépassé ; l’issue peut être indéterminée. Inspectez le document avant toute nouvelle action."), true, operationId);
     }
 
     // ----- Retained evidence -----------------------------------------------------------------------------------------
@@ -502,7 +502,7 @@ internal sealed partial class SilentBridge
             && Math.Abs((DateTime.Parse(Json.Str(entry, "startedAt")!, null, System.Globalization.DateTimeStyles.RoundtripKind).ToUniversalTime() - process.StartedAtUtc).TotalSeconds) < 1));
         bool restarted = original.Count > 0 || InDesignRestartedSince(Json.Str(lease, "createdAt"));
         if (!restarted || current.Count == 0 || originalAlive)
-            throw Fail("RECONCILIATION_RESTART_REQUIRED", "Le script UXP peut encore reprendre : fermez complètement InDesign, relancez-le, puis recommencez la réconciliation.", true, operationId);
+            throw Fail("RECONCILIATION_RESTART_REQUIRED", Strings.T("The UXP script may still resume: quit InDesign completely, start it again, then retry the reconciliation.", "Le script UXP peut encore reprendre : fermez complètement InDesign, relancez-le, puis recommencez la réconciliation."), true, operationId);
     }
 
     // ----- Operation status and reconciliation -----------------------------------------------------------------------
@@ -518,10 +518,10 @@ internal sealed partial class SilentBridge
                 string receipt = file.Name[(operationId.Length + 1)..^".reconciliation.json".Length];
                 if (!Json.Uuid().IsMatch(receipt)) continue;
                 if (file.Attributes.HasFlag(FileAttributes.ReparsePoint) || file.Length <= 0 || file.Length > ReconciliationRecordLimit)
-                    throw Fail("RECONCILIATION_EVIDENCE_INVALID", "La preuve privée de réconciliation est invalide.", true, operationId);
+                    throw Fail("RECONCILIATION_EVIDENCE_INVALID", Strings.T("The private reconciliation evidence is invalid.", "La preuve privée de réconciliation est invalide."), true, operationId);
                 Protect(file.FullName);
                 var record = ReadSmallJson(file.FullName, ReconciliationRecordLimit)
-                    ?? throw Fail("RECONCILIATION_EVIDENCE_INVALID", "La preuve privée de réconciliation est illisible.", true, operationId);
+                    ?? throw Fail("RECONCILIATION_EVIDENCE_INVALID", Strings.T("The private reconciliation evidence is unreadable.", "La preuve privée de réconciliation est illisible."), true, operationId);
                 string? releaseState = Json.Str(record, "releaseState");
                 bool validRelease = releaseState is null or "prepared" || (releaseState == "confirmed" && DateTime.TryParse(Json.Str(record, "releaseConfirmedAt"), out _));
                 if (Json.Long(record, "schemaVersion") != 1 || Json.Str(record, "operationId") != operationId
@@ -531,7 +531,7 @@ internal sealed partial class SilentBridge
                     || record["snapshots"] is not JsonArray || record["backupIds"] is not JsonArray backupIds
                     || !backupIds.All(id => id is JsonValue value && value.TryGetValue(out string? text) && Json.BackupId().IsMatch(text))
                     || !validRelease)
-                    throw Fail("RECONCILIATION_EVIDENCE_INVALID", "La preuve privée de réconciliation ne correspond pas à l’opération.", true, operationId);
+                    throw Fail("RECONCILIATION_EVIDENCE_INVALID", Strings.T("The private reconciliation evidence does not match the operation.", "La preuve privée de réconciliation ne correspond pas à l’opération."), true, operationId);
                 record["recordPath"] = file.FullName;
                 record["retainedUntil"] = (file.LastWriteTimeUtc + RuntimeRetention).ToString("o");
                 records.Add(record);
@@ -630,7 +630,7 @@ internal sealed partial class SilentBridge
 
     private string ClaimReconciliation(string operationId)
     {
-        if (!Json.Uuid().IsMatch(operationId)) throw Fail("OPERATION_ID_INVALID", "Identifiant d’opération silencieuse invalide.");
+        if (!Json.Uuid().IsMatch(operationId)) throw Fail("OPERATION_ID_INVALID", Strings.T("Invalid silent operation id.", "Identifiant d’opération silencieuse invalide."));
         string claimPath = Path.Combine(RuntimeRoot, $"{operationId}.reconciliation.claim.json");
         for (int attempt = 0; attempt < 2; attempt++)
         {
@@ -649,18 +649,18 @@ internal sealed partial class SilentBridge
             {
                 var claim = ReadSmallJson(claimPath, 4096);
                 if (claim is null || Json.Long(claim, "schemaVersion") != 1 || Json.Str(claim, "operationId") != operationId)
-                    throw Fail("RECONCILIATION_CLAIM_INVALID", "La réservation inter-processus de réconciliation est illisible.", true, operationId);
+                    throw Fail("RECONCILIATION_CLAIM_INVALID", Strings.T("The cross-process reconciliation claim is unreadable.", "La réservation inter-processus de réconciliation est illisible."), true, operationId);
                 if (LeaseOwnerAlive(claim))
-                    throw Fail("RECONCILIATION_ALREADY_ACTIVE_CROSS_PROCESS", "Une autre tâche réconcilie déjà cette opération InDesign.", true, operationId);
+                    throw Fail("RECONCILIATION_ALREADY_ACTIVE_CROSS_PROCESS", Strings.T("Another task is already reconciling this InDesign operation.", "Une autre tâche réconcilie déjà cette opération InDesign."), true, operationId);
                 DeleteQuietly(claimPath);
             }
         }
-        throw Fail("RECONCILIATION_ALREADY_ACTIVE_CROSS_PROCESS", "La réservation inter-processus de réconciliation n’a pas pu être acquise.", true, operationId);
+        throw Fail("RECONCILIATION_ALREADY_ACTIVE_CROSS_PROCESS", Strings.T("The cross-process reconciliation claim could not be acquired.", "La réservation inter-processus de réconciliation n’a pas pu être acquise."), true, operationId);
     }
 
     public async Task<JsonObject> ReconcileUnknownOperation(string operationId, string reason)
     {
-        if (reconciliationActive) throw Fail("RECONCILIATION_ALREADY_ACTIVE", "Une réconciliation InDesign est déjà active.", true);
+        if (reconciliationActive) throw Fail("RECONCILIATION_ALREADY_ACTIVE", Strings.T("An InDesign reconciliation is already running.", "Une réconciliation InDesign est déjà active."), true);
         string claimPath = ClaimReconciliation(operationId);
         reconciliationActive = true;
         try
@@ -677,7 +677,7 @@ internal sealed partial class SilentBridge
     private async Task<JsonObject> Reconcile(string operationId, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length < 8 || reason.Length > 500)
-            throw Fail("RECONCILIATION_REASON_REQUIRED", "Un motif de réconciliation explicite est requis.");
+            throw Fail("RECONCILIATION_REASON_REQUIRED", Strings.T("An explicit reconciliation reason is required.", "Un motif de réconciliation explicite est requis."));
 
         var prepared = FindReconciliationRecord(operationId);
         if (prepared is not null && Json.Str(prepared, "releaseState") == "prepared")
@@ -702,22 +702,22 @@ internal sealed partial class SilentBridge
 
         var lease = ReadLease();
         if (lease is null || Json.Str(lease, "operationId") != operationId)
-            throw Fail("RECONCILIATION_LEASE_MISMATCH", "Le verrou à réconcilier est absent ou a changé.", true, operationId);
+            throw Fail("RECONCILIATION_LEASE_MISMATCH", Strings.T("The lock to reconcile is missing or changed.", "Le verrou à réconcilier est absent ou a changé."), true, operationId);
         if (Json.Str(lease, "sessionId") != SessionId && LeaseOwnerAlive(lease))
-            throw Fail("RECONCILIATION_NOT_CRASHED", "Le serveur qui a posé ce verrou fonctionne encore ; seule une opération interrompue peut être réconciliée.", true, operationId);
+            throw Fail("RECONCILIATION_NOT_CRASHED", Strings.T("The server that set this lock is still running; only an interrupted operation can be reconciled.", "Le serveur qui a posé ce verrou fonctionne encore ; seule une opération interrompue peut être réconciliée."), true, operationId);
         if (activeOperation.Value is not null)
-            throw Fail("RECONCILIATION_HOST_BUSY", "Une opération InDesign est encore active dans ce serveur.", true, operationId);
+            throw Fail("RECONCILIATION_HOST_BUSY", Strings.T("An InDesign operation is still running in this server.", "Une opération InDesign est encore active dans ce serveur."), true, operationId);
 
         var retained = FindRetainedOperation(operationId);
         // Without evidence (session cut between the lease and the script), only a full InDesign restart after the
         // lease proves that no script of the operation can still run.
         if (retained is null && !InDesignRestartedSince(Json.Str(lease, "createdAt")))
-            throw Fail("RECONCILIATION_EVIDENCE_MISSING", "Les preuves privées de l’opération interrompue sont introuvables. Fermez complètement puis relancez InDesign avant de réconcilier.", true, operationId);
+            throw Fail("RECONCILIATION_EVIDENCE_MISSING", Strings.T("The private evidence of the interrupted operation is missing. Quit InDesign completely and start it again before reconciling.", "Les preuves privées de l’opération interrompue sont introuvables. Fermez complètement puis relancez InDesign avant de réconcilier."), true, operationId);
         var initial = retained is null ? new ResultState(true, null) : ReadResult(retained.ResultPath);
         if (!initial.Pending && !Json.IsTrue(initial.Result, "requiresInspection"))
         {
             if (!ReleaseLease(operationId))
-                throw Fail("RECONCILIATION_RELEASE_FAILED", "Le verrou n’a pas pu être libéré après la confirmation du résultat.", true, operationId);
+                throw Fail("RECONCILIATION_RELEASE_FAILED", Strings.T("The lock could not be released after the result was confirmed.", "Le verrou n’a pas pu être libéré après la confirmation du résultat."), true, operationId);
             return new JsonObject
             {
                 ["ok"] = true, ["operationId"] = operationId, ["status"] = "completed", ["outcome"] = initial.Result!.DeepClone(),
@@ -732,21 +732,21 @@ internal sealed partial class SilentBridge
         try
         {
             if (Json.IsTrue(await Status(refreshMarkers: false).ConfigureAwait(false), "modalState"))
-                throw Fail("RECONCILIATION_HOST_BUSY", "InDesign est encore modal ; la réconciliation reste bloquée.", true, operationId);
+                throw Fail("RECONCILIATION_HOST_BUSY", Strings.T("InDesign is still modal; the reconciliation stays blocked.", "InDesign est encore modal ; la réconciliation reste bloquée."), true, operationId);
             var first = await SnapshotAllDocuments().ConfigureAwait(false);
             await Task.Delay(500).ConfigureAwait(false);
             var second = await SnapshotAllDocuments().ConfigureAwait(false);
-            AssertStableSnapshots(first, second, "Les documents ne sont pas stables pendant la réconciliation.");
+            AssertStableSnapshots(first, second, Strings.T("The documents are not stable during the reconciliation.", "Les documents ne sont pas stables pendant la réconciliation."));
             var safetyBackups = await BackupDocuments(second).ConfigureAwait(false);
             try
             {
                 var final = await SnapshotAllDocuments().ConfigureAwait(false);
-                AssertStableSnapshots(second, final, "Les documents ont changé après les sauvegardes de réconciliation.");
+                AssertStableSnapshots(second, final, Strings.T("The documents changed after the reconciliation backups.", "Les documents ont changé après les sauvegardes de réconciliation."));
                 if (Json.IsTrue(await Status(refreshMarkers: false).ConfigureAwait(false), "modalState"))
-                    throw Fail("RECONCILIATION_HOST_BUSY", "InDesign est redevenu modal pendant la réconciliation.", true, operationId);
+                    throw Fail("RECONCILIATION_HOST_BUSY", Strings.T("InDesign became modal again during the reconciliation.", "InDesign est redevenu modal pendant la réconciliation."), true, operationId);
                 var current = ReadLease();
                 if (current is null || Json.Str(current, "operationId") != operationId || Json.Str(current, "sessionId") != Json.Str(lease, "sessionId"))
-                    throw Fail("RECONCILIATION_LEASE_MISMATCH", "Le verrou a changé pendant la réconciliation.", true, operationId);
+                    throw Fail("RECONCILIATION_LEASE_MISMATCH", Strings.T("The lock changed during the reconciliation.", "Le verrou a changé pendant la réconciliation."), true, operationId);
 
                 var finalResult = retained is null ? new ResultState(true, null) : ReadResult(retained.ResultPath);
                 string? quarantined = null;
@@ -759,14 +759,14 @@ internal sealed partial class SilentBridge
                         Protect(retained.QuarantinedScriptPath);
                     }
                     else if (!IsRegularFile(retained.QuarantinedScriptPath, out _))
-                        throw Fail("RECONCILIATION_EVIDENCE_MISSING", "Le script privé interrompu ne peut pas être neutralisé.", true, operationId);
+                        throw Fail("RECONCILIATION_EVIDENCE_MISSING", Strings.T("The interrupted private script cannot be neutralized.", "Le script privé interrompu ne peut pas être neutralisé."), true, operationId);
                     quarantined = retained.QuarantinedScriptPath;
                 }
                 await Task.Delay(500).ConfigureAwait(false);
                 if (Json.IsTrue(await Status(refreshMarkers: false).ConfigureAwait(false), "modalState"))
-                    throw Fail("RECONCILIATION_HOST_BUSY", "InDesign est redevenu modal après la neutralisation de l’opération.", true, operationId);
+                    throw Fail("RECONCILIATION_HOST_BUSY", Strings.T("InDesign became modal again after the operation was neutralized.", "InDesign est redevenu modal après la neutralisation de l’opération."), true, operationId);
                 var settled = await SnapshotAllDocuments().ConfigureAwait(false);
-                AssertStableSnapshots(final, settled, "Les documents ont changé après la neutralisation de l’opération.");
+                AssertStableSnapshots(final, settled, Strings.T("The documents changed after the operation was neutralized.", "Les documents ont changé après la neutralisation de l’opération."));
                 finalResult = retained is null ? new ResultState(true, null) : ReadResult(retained.ResultPath);
 
                 string reconciledAt = DateTime.UtcNow.ToString("o");
@@ -789,7 +789,7 @@ internal sealed partial class SilentBridge
                 };
                 WriteAtomicPrivateJson(recordPath, record);
                 if (!ReleaseLease(operationId))
-                    throw Fail("RECONCILIATION_RELEASE_FAILED", "Le verrou n’a pas pu être libéré après réconciliation.", true, operationId);
+                    throw Fail("RECONCILIATION_RELEASE_FAILED", Strings.T("The lock could not be released after reconciliation.", "Le verrou n’a pas pu être libéré après réconciliation."), true, operationId);
                 string releaseConfirmedAt = DateTime.UtcNow.ToString("o");
                 record["releaseState"] = "confirmed";
                 record["releaseConfirmedAt"] = releaseConfirmedAt;
