@@ -8,9 +8,13 @@
 #                                                                          ~\.nexus\nexus-indesign\private)
 # It downloads the latest release's NexusInDesign-win-x64.zip or NexusInDesign-win-arm64.zip (by the PC's
 # architecture), checks its SHA-256 against the release's SHA256SUMS.txt before extracting anything (build provenance:
-# `gh attestation verify <file> --repo pironjulien/NexusInDesign`), then installs NexusInDesign.exe as
-# %USERPROFILE%\.nexus\nexus-indesign\NexusInDesign.exe, the path the plugins start. A running session keeps its copy
-# (renamed NexusInDesign.exe.old-<id>, removed by a later run); new sessions get the new version. Run it again to update.
+# `gh attestation verify <file> --repo pironjulien/NexusInDesign`), then installs into %USERPROFILE%\.nexus\nexus-indesign:
+#   versions\<version>-<hash>\NexusInDesign.exe   the engine, in a folder of its own never modified once written
+#   current.txt                                   the name of that folder: the version new sessions start
+#   NexusInDesign.exe                             the launcher (Native AOT) the plugins start: it runs the engine
+#                                                 current.txt names
+# A session already open keeps running its own engine, whose file never changes under it; an older version's folder is
+# removed by a later run once no process runs its engine any more. Run it again to update.
 # NEXUS_PACK=1 (the Nexus pack): no question, no window; exit code 0 on success; a last "NEXUS_PACK_RESULT ..." line.
 # NEXUS_RELEASE_TAG: install that release (vX.Y.Z or vX.Y.Z-dev.N) instead of the latest.
 # For tests only: NEXUS_INDESIGN_SOURCE (a local zip instead of the latest release) and NEXUS_INDESIGN_HOME (another
@@ -31,6 +35,8 @@ $Repo = 'pironjulien/NexusInDesign'
 $Pack = $env:NEXUS_PACK -eq '1'
 $Root = if ($env:NEXUS_INDESIGN_HOME) { $env:NEXUS_INDESIGN_HOME } else { Join-Path $env:USERPROFILE '.nexus\nexus-indesign' }
 $Stable = Join-Path $Root 'NexusInDesign.exe'
+$Versions = Join-Path $Root 'versions'
+$Pointer = Join-Path $Root 'current.txt'
 $Arch = if (($env:PROCESSOR_ARCHITEW6432, $env:PROCESSOR_ARCHITECTURE) -contains 'ARM64') { 'win-arm64' } else { 'win-x64' }
 $Package = "NexusInDesign-$Arch.zip"
 
@@ -67,12 +73,12 @@ function Get-ExpectedHash([byte[]]$Manifest, [string]$Name) {
     return $expected
 }
 
-function Invoke-WhileHeld([string]$Staged, [scriptblock]$Action) {
-    # Renaming the freshly copied executable fails while another process holds it open without delete sharing. This
-    # installer never runs or keeps open the staged copy, but antivirus and indexing services open freshly written
-    # executables for a moment to scan them ("being used by another process", seen once with NexusAGYmail on a fresh
-    # GitHub Windows runner). Only that external, transient hold (sharing, lock or access violation while the staged
-    # copy is still there) is waited out, at most 10 s; any other error, or a longer hold, fails.
+function Invoke-WhileHeld([string]$Staged, [string]$Target, [scriptblock]$Action) {
+    # Renaming a freshly copied executable (or the folder holding it) fails while another process holds it open without
+    # delete sharing. This installer never keeps a staged copy open, but antivirus and indexing services open freshly
+    # written executables for a moment to scan them ("being used by another process", seen once with NexusAGYmail on a
+    # fresh GitHub Windows runner). Only that external, transient hold (sharing, lock or access violation while the
+    # staged copy is still there) is waited out, at most 10 s; any other error, or a longer hold, fails.
     $transient = 0x80070020, 0x80070021, 0x80070005  # ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION, ERROR_ACCESS_DENIED
     for ($attempt = 1; ; $attempt++) {
         try { & $Action; return }
@@ -81,16 +87,47 @@ function Invoke-WhileHeld([string]$Staged, [scriptblock]$Action) {
             while ($failure.InnerException -and $failure -is [Management.Automation.MethodInvocationException]) { $failure = $failure.InnerException }
             $held = ($failure -is [IO.IOException] -or $failure -is [UnauthorizedAccessException]) -and
                 ($transient -contains $failure.HResult) -and (Test-Path -LiteralPath $Staged)
-            if (-not $held -or $attempt -ge 40) { throw "Cannot install $Staged as $($Stable): $($failure.Message)" }
+            if (-not $held -or $attempt -ge 40) { throw "Cannot install $Staged as $($Target): $($failure.Message)" }
             Start-Sleep -Milliseconds 250
         }
     }
 }
 
-# A running EXE cannot be overwritten but can be renamed: the new one replaces it, the running copy becomes
-# NexusInDesign.exe.old-<id>, removed by a later run once its session has ended. Returns that copy's path (empty for a
-# first installation), so a new executable that does not run can be taken back.
+function Get-Sha256([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+
+# The engine goes to versions\<version>-<first 16 hex digits of its SHA-256>, copied under a temporary name and renamed
+# into place in one step, then never modified: a session that runs it keeps a file that never changes under it (a
+# self-contained single-file .NET program reads its own file again each time it loads an assembly). Returns the
+# folder's name and whether this run wrote it.
+function Install-Engine([string]$Source, [string]$Version) {
+    $hash = Get-Sha256 $Source
+    $name = "$Version-$($hash.Substring(0, 16))"
+    $target = Join-Path $Versions $name
+    $engine = Join-Path $target 'NexusInDesign.exe'
+    if ((Test-Path -LiteralPath $engine -PathType Leaf) -and (Get-Sha256 $engine) -eq $hash) { return $name, $false }
+    if (Test-Path -LiteralPath $target) {
+        # A folder left incomplete or altered: never a running engine's (its file could not be deleted).
+        try { Remove-Item -LiteralPath $target -Recurse -Force }
+        catch { throw "$target is not the published engine and cannot be removed: $($_.Exception.Message)" }
+    }
+    New-Item -ItemType Directory -Force -Path $Versions | Out-Null
+    $staged = Join-Path $Versions ('.new-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $staged | Out-Null
+    try {
+        Copy-Item -LiteralPath $Source -Destination (Join-Path $staged 'NexusInDesign.exe')
+        Invoke-WhileHeld $staged $target { [IO.Directory]::Move($staged, $target) }
+    } finally {
+        Remove-Item -LiteralPath $staged -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    return $name, $true
+}
+
+# The launcher the plugins start, a native program (it never reads its own file again once started): a running copy
+# can be renamed aside (NexusInDesign.exe.old-<id>, removed by a later run once its session has ended) and the new one
+# put in its place. Nothing to do when it is already this one. Returns the previous copy's path ('' for a first
+# installation or no change) and whether it changed.
 function Update-Stable([string]$Source) {
+    if ((Test-Path -LiteralPath $Stable -PathType Leaf) -and (Get-Sha256 $Stable) -eq (Get-Sha256 $Source)) { return '', $false }
     New-Item -ItemType Directory -Force -Path $Root | Out-Null
     $staged = Join-Path $Root ('NexusInDesign.exe.new-' + [guid]::NewGuid().ToString('N'))
     $backup = ''
@@ -98,31 +135,63 @@ function Update-Stable([string]$Source) {
     try {
         if (Test-Path -LiteralPath $Stable) {
             $backup = Join-Path $Root ('NexusInDesign.exe.old-' + [guid]::NewGuid().ToString('N'))
-            Invoke-WhileHeld $staged { [IO.File]::Replace($staged, $Stable, $backup) }
+            Invoke-WhileHeld $staged $Stable { [IO.File]::Replace($staged, $Stable, $backup) }
         } else {
-            Invoke-WhileHeld $staged { [IO.File]::Move($staged, $Stable) }
+            Invoke-WhileHeld $staged $Stable { [IO.File]::Move($staged, $Stable) }
         }
     } finally {
         Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
     }
-    return $backup
+    return $backup, $true
 }
 
-# The new executable did not run: the previous one goes back in place (a running session keeps its own copy), or, on a
-# first installation, the new one is removed.
+# The launcher just installed did not run: the previous one goes back in place, or, on a first installation, the new
+# one is removed.
 function Undo-Stable([string]$Backup) {
     if ($Backup -and (Test-Path -LiteralPath $Backup)) {
         $failed = Join-Path $Root ('NexusInDesign.exe.old-' + [guid]::NewGuid().ToString('N'))
-        Invoke-WhileHeld $Backup { [IO.File]::Replace($Backup, $Stable, $failed) }
+        Invoke-WhileHeld $Backup $Stable { [IO.File]::Replace($Backup, $Stable, $failed) }
     } else {
         Remove-Item -LiteralPath $Stable -Force -ErrorAction SilentlyContinue
     }
 }
 
-function Remove-Leftovers {
+function Get-Current {
+    if (-not (Test-Path -LiteralPath $Pointer -PathType Leaf)) { return '' }
+    return ([IO.File]::ReadAllText($Pointer)).Trim()
+}
+
+# current.txt names the version new sessions start; replaced in one step, so a launcher reads the old name or the new.
+function Set-Current([string]$Name) {
+    if (-not $Name) { Remove-Item -LiteralPath $Pointer -Force -ErrorAction SilentlyContinue; return }
+    $staged = $Pointer + '.new-' + [guid]::NewGuid().ToString('N')
+    [IO.File]::WriteAllText($staged, $Name, [Text.UTF8Encoding]::new($false))
+    try {
+        if (Test-Path -LiteralPath $Pointer) { [IO.File]::Replace($staged, $Pointer, [NullString]::Value) } else { [IO.File]::Move($staged, $Pointer) }
+    } finally {
+        Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Removes what no process uses any more: renamed launchers, staged copies, and the folders of other versions. A
+# running program's file cannot be deleted, so the folder of an engine a session still runs stays, whole, until a later
+# run.
+function Remove-Leftovers([string]$Keep) {
     foreach ($old in @(Get-ChildItem -LiteralPath $Root -Filter 'NexusInDesign.exe.old-*' -File -ErrorAction SilentlyContinue)) {
         Remove-Item -LiteralPath $old.FullName -Force -ErrorAction SilentlyContinue
     }
+    foreach ($folder in @(Get-ChildItem -LiteralPath $Versions -Directory -Force -ErrorAction SilentlyContinue)) {
+        if ($folder.Name -eq $Keep) { continue }
+        $engine = Join-Path $folder.FullName 'NexusInDesign.exe'
+        try { if (Test-Path -LiteralPath $engine) { Remove-Item -LiteralPath $engine -Force -ErrorAction Stop } }
+        catch { continue }  # still running
+        Remove-Item -LiteralPath $folder.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Test-Engine([string]$Path, [string]$Version) {
+    $answer = ((& $Path --version) -replace '^NexusInDesign\s+', '').Trim()
+    return (-not $LASTEXITCODE) -and $answer -eq $Version
 }
 
 function Install-NexusInDesign {
@@ -147,20 +216,30 @@ function Install-NexusInDesign {
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::ExtractToDirectory($zip, $unpacked)
         $exe = Join-Path $unpacked 'NexusInDesign.exe'
-        if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Not a NexusInDesign package.' }
+        $launcher = Join-Path $unpacked 'NexusInDesignLauncher.exe'
+        if (-not (Test-Path -LiteralPath $exe -PathType Leaf) -or -not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'Not a NexusInDesign package.' }
         Get-ChildItem -LiteralPath $unpacked -Recurse -File | Unblock-File
-        # The version from the executable's version resource, without running it: a program just run is what scanners
-        # open right after, when its copy has to be renamed into place.
+        # The version from the engine's version resource.
         $version = "$((Get-Item -LiteralPath $exe).VersionInfo.ProductVersion)".Split('+')[0].Trim()
         if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Not a NexusInDesign package (no version).' }
-        $backup = Update-Stable $exe
-        # Run once in place: the package must start on this PC's architecture and report the version it carries.
-        $answer = ((& $Stable --version) -replace '^NexusInDesign\s+', '').Trim()
-        if ($LASTEXITCODE -or $answer -ne $version) {
-            Undo-Stable $backup
+
+        $name, $written = Install-Engine $exe $version
+        # Run once from its own folder (nothing renames it afterwards): the package must start on this PC's
+        # architecture and report the version it carries.
+        if (-not (Test-Engine (Join-Path $Versions "$name\NexusInDesign.exe") $version)) {
+            if ($written -and $name -ne (Get-Current)) { Remove-Item -LiteralPath (Join-Path $Versions $name) -Recurse -Force -ErrorAction SilentlyContinue }
             throw "The package does not run on this PC ($Arch)."
         }
-        Remove-Leftovers
+        $previous = Get-Current
+        $backup, $changed = Update-Stable $launcher
+        Set-Current $name
+        # Then as the plugins start it: the launcher, which runs the engine current.txt names.
+        if (-not (Test-Engine $Stable $version)) {
+            Set-Current $previous
+            if ($changed) { Undo-Stable $backup }
+            throw "The package does not run on this PC ($Arch)."
+        }
+        Remove-Leftovers $name
         Say "NexusInDesign $version is in $Root." Green
         if (-not $Pack) {
             Say 'Add the nexus-indesign plugin to Claude Code or Codex (NexusSystem does it), then open a new conversation.' Yellow
@@ -172,10 +251,20 @@ function Install-NexusInDesign {
 }
 
 function Remove-NexusInDesign {
-    if (-not (Test-Path -LiteralPath $Stable)) { Say 'NexusInDesign is not installed.'; return 'NEXUS_PACK_RESULT NexusInDesign=absent' }
-    foreach ($item in @(Get-ChildItem -LiteralPath $Root -Filter 'NexusInDesign.exe*' -File -Force)) {
-        try { Remove-Item -LiteralPath $item.FullName -Force -ErrorAction Stop } catch { Say "Still in use (removed later): $($item.Name)" Yellow }
+    if (-not (Test-Path -LiteralPath $Stable) -and -not (Test-Path -LiteralPath $Versions)) {
+        Say 'NexusInDesign is not installed.'
+        return 'NEXUS_PACK_RESULT NexusInDesign=absent'
     }
+    $busy = @()
+    foreach ($item in @(Get-ChildItem -LiteralPath $Root -Filter 'NexusInDesign.exe*' -File -Force)) {
+        try { Remove-Item -LiteralPath $item.FullName -Force -ErrorAction Stop } catch { $busy += $item.Name }
+    }
+    Set-Current ''
+    foreach ($folder in @(Get-ChildItem -LiteralPath $Versions -Directory -Force -ErrorAction SilentlyContinue)) {
+        try { Remove-Item -LiteralPath $folder.FullName -Recurse -Force -ErrorAction Stop } catch { $busy += "versions\$($folder.Name)" }
+    }
+    if (-not $busy) { Remove-Item -LiteralPath $Versions -Force -ErrorAction SilentlyContinue }
+    foreach ($name in $busy) { Say "Still in use (removed later): $name" Yellow }
     Say 'NexusInDesign removed. Backups, audit journal and settings stay in ~\.nexus\nexus-indesign (delete that folder to forget them).' Green
     return 'NEXUS_PACK_RESULT NexusInDesign=removed'
 }

@@ -1,5 +1,7 @@
 # Release files of one version (used by .github/workflows/release.yml, runnable locally to check a release):
-#   NexusInDesign-win-x64.zip, NexusInDesign-win-arm64.zip    self-contained single-file NexusInDesign.exe per architecture
+#   NexusInDesign-win-x64.zip, NexusInDesign-win-arm64.zip    per architecture: the engine (self-contained single-file
+#                                                             NexusInDesign.exe) and its launcher (NexusInDesignLauncher.exe,
+#                                                             Native AOT)
 #   nexus-indesign-<version>-win-x64.mcpb, …-win-arm64.mcpb   MCP bundles (manifest.json, icon, server\NexusInDesign.exe)
 #   get.ps1                                                   the installer, checked and attested like the packages
 #   SHA256SUMS.txt                                            SHA-256 of every file above
@@ -20,13 +22,22 @@ if ($engine -notmatch 'public const string Version = "([^"]+)"' -or $Matches[1] 
 foreach ($folder in $work, $Out) { if (Test-Path $folder) { Remove-Item $folder -Recurse -Force } }
 New-Item -ItemType Directory -Force $Out | Out-Null
 
+# Native AOT links with the Visual C++ tools, which it finds through vswhere.exe.
+$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
+if ((Test-Path (Join-Path $vswhere 'vswhere.exe')) -and ($env:PATH -split ';') -notcontains $vswhere) { $env:PATH += ";$vswhere" }
 foreach ($rid in 'win-x64', 'win-arm64') {
     $publish = Join-Path $work $rid
     dotnet publish (Join-Path $repo 'native\NexusInDesign.csproj') -c Release -r $rid --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none `
         -p:NexusBuild="$work\$rid-build\" -o $publish -v q
     if ($LASTEXITCODE) { throw "dotnet publish $rid failed." }
-    Compress-Archive -LiteralPath (Join-Path $publish 'NexusInDesign.exe') -DestinationPath (Join-Path $Out "NexusInDesign-$rid.zip")
+    # The launcher installed as NexusInDesign.exe, which runs the engine of the current version (see get.ps1).
+    $launcher = Join-Path $work "$rid-launcher"
+    dotnet publish (Join-Path $repo 'launcher\NexusInDesignLauncher.csproj') -c Release -r $rid -p:DebugType=none `
+        -p:NexusBuild="$work\$rid-launcher-build\" -o $launcher -v q
+    if ($LASTEXITCODE) { throw "dotnet publish launcher $rid failed." }
+    Compress-Archive -LiteralPath (Join-Path $publish 'NexusInDesign.exe'), (Join-Path $launcher 'NexusInDesignLauncher.exe') `
+        -DestinationPath (Join-Path $Out "NexusInDesign-$rid.zip")
 }
 
 # MCP bundles (https://github.com/modelcontextprotocol/mcpb), one per architecture, same manifest.

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -64,61 +63,31 @@ public sealed class ReleaseTests : IDisposable
             Assert.DoesNotMatch(forbidden, File.ReadAllText(Repository.File(file)));
     }
 
-    private static (int Code, string Output) Get(string shell, string zip, string home, params string[] args)
-    {
-        var info = new ProcessStartInfo(shell) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
-        foreach (string argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", Repository.File("get.ps1") }.Concat(args)) info.ArgumentList.Add(argument);
-        info.Environment["NEXUS_INDESIGN_SOURCE"] = zip;
-        info.Environment["NEXUS_INDESIGN_HOME"] = home;
-        info.Environment["NEXUS_PACK"] = "1";
-        info.Environment.Remove("NEXUS_RELEASE_TAG");
-        using var process = Process.Start(info)!;
-        process.StandardInput.Close();
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-        Assert.True(process.WaitForExit(120_000), "get.ps1 did not finish");
-        return (process.ExitCode, output.Result + error.Result);
-    }
-
-    // A package like a release's: one single-file NexusInDesign.exe (framework-dependent here, self-contained in a
-    // release), the only file get.ps1 installs, so it must run alone. Published once for every test of the run.
-    private static readonly Lazy<string> package = new(() =>
-    {
-        string work = Path.Combine(Path.GetTempPath(), "nexusindesign-get", "package-" + Guid.NewGuid().ToString("N"));
-        string publish = Path.Combine(work, "publish");
-        var info = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (string argument in new[] { "publish", Repository.File("native", "NexusInDesign.csproj"), "-c", "Release", "-r", "win-x64",
-            "--self-contained", "false", "-p:PublishSingleFile=true", "-p:DebugType=none", $"-p:NexusBuild={Path.Combine(work, "build")}{Path.DirectorySeparatorChar}", "-o", publish, "-v", "q" })
-            info.ArgumentList.Add(argument);
-        using (var process = Process.Start(info)!)
-        {
-            var output = process.StandardOutput.ReadToEndAsync();
-            var error = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(600_000) || process.ExitCode != 0) throw new InvalidOperationException("dotnet publish failed: " + output.Result + error.Result);
-        }
-        string zip = Path.Combine(work, "NexusInDesign-win-x64.zip");
-        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
-            archive.CreateEntryFromFile(Path.Combine(publish, "NexusInDesign.exe"), "NexusInDesign.exe");
-        return zip;
-    });
+    private static (int Code, string Output) Get(string shell, string zip, string home, params string[] args) => Packages.Get(shell, zip, home, args);
 
     [Theory]
     [InlineData("pwsh")]
     [InlineData("powershell")]
     public void Get_installs_updates_and_removes_from_a_local_package(string shell)
     {
-        string zip = package.Value;
         string home = Path.Combine(root, "home");
-        var (code, output) = Get(shell, zip, home);
+        var (code, output) = Get(shell, Packages.Current, home);
         Assert.True(code == 0, output);
         Assert.Equal($"NEXUS_PACK_RESULT NexusInDesign=installed {Program.Version}", output.Trim().Split('\n')[^1].Trim());
+        // The launcher the plugins start, the pointer, and the engine in a folder of its own.
         Assert.True(File.Exists(Path.Combine(home, "NexusInDesign.exe")));
-        (code, output) = Get(shell, zip, home);
+        string name = File.ReadAllText(Path.Combine(home, "current.txt")).Trim();
+        Assert.Matches($@"^{Regex.Escape(Program.Version)}-[0-9a-f]{{16}}$", name);
+        Assert.True(File.Exists(Path.Combine(home, "versions", name, "NexusInDesign.exe")));
+        (code, output) = Get(shell, Packages.Current, home);
         Assert.True(code == 0, output);
         Assert.Single(Directory.GetFiles(home, "NexusInDesign.exe*"));
-        (code, output) = Get(shell, zip, home, "-Remove");
+        Assert.Equal([name], Directory.GetDirectories(Path.Combine(home, "versions")).Select(Path.GetFileName));
+        (code, output) = Get(shell, Packages.Current, home, "-Remove");
         Assert.True(code == 0, output);
         Assert.False(File.Exists(Path.Combine(home, "NexusInDesign.exe")));
+        Assert.False(File.Exists(Path.Combine(home, "current.txt")));
+        Assert.False(Directory.Exists(Path.Combine(home, "versions")));
     }
 
     [Theory]
@@ -129,13 +98,14 @@ public sealed class ReleaseTests : IDisposable
     public void A_scanner_briefly_holding_the_fresh_copy_does_not_fail_the_installation(string shell, bool update)
     {
         // What an antivirus does to a freshly written executable: opens it for a moment. Without delete sharing that
-        // blocks renaming it into place; get.ps1 waits that hold out instead of failing ("being used by another
-        // process", seen once with NexusAGYmail in NexusSystem's pack job on a fresh Windows runner).
-        string zip = package.Value;
+        // blocks renaming its staged folder into place (versions\.new-<id> to versions\<version>-<hash>); get.ps1
+        // waits that hold out instead of failing ("being used by another process", seen once with NexusAGYmail in
+        // NexusSystem's pack job on a fresh Windows runner). An update writes another engine: the rebuilt package.
+        string zip = update ? Packages.Rebuilt : Packages.Current;
         string home = Path.Combine(root, "home");
         if (update)
         {
-            var first = Get(shell, zip, home);
+            var first = Get(shell, Packages.Current, home);
             Assert.True(first.Code == 0, first.Output);
         }
         else Directory.CreateDirectory(home);
@@ -143,10 +113,14 @@ public sealed class ReleaseTests : IDisposable
         string? held = null;
         bool stagedWhileHeld = false;
         using var released = new ManualResetEventSlim();
-        using var watcher = new FileSystemWatcher(home, "NexusInDesign.exe.new-*");
+        using var watcher = new FileSystemWatcher(home, "NexusInDesign.exe") { IncludeSubdirectories = true };
         var scanner = new Thread(() =>
         {
-            string path = watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change ? Path.Combine(home, change.Name!) : "";
+            string path = "";
+            var waiting = Stopwatch.StartNew();
+            while (path.Length == 0 && waiting.Elapsed < TimeSpan.FromSeconds(60))
+                if (watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change && change.Name!.Contains(".new-", StringComparison.Ordinal))
+                    path = Path.Combine(home, change.Name!);
             var deadline = Stopwatch.StartNew();
             while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && File.Exists(path))
             {
@@ -173,5 +147,7 @@ public sealed class ReleaseTests : IDisposable
         string stable = Path.Combine(home, "NexusInDesign.exe");
         Assert.Equal(Program.Version, FileVersionInfo.GetVersionInfo(stable).ProductVersion!.Split('+')[0]);
         Assert.Empty(Directory.GetFiles(home, "NexusInDesign.exe.new-*"));
+        Assert.Empty(Directory.GetDirectories(Path.Combine(home, "versions"), ".new-*"));
+        Assert.Single(Directory.GetDirectories(Path.Combine(home, "versions")));
     }
 }

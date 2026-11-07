@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Installed as ~\.nexus\nexus-indesign\NexusInDesign.exe, the path the plugins start: it runs the engine of the
+       version named by current.txt, from its own folder under versions\, which is never modified once written.
+       Compiled ahead of time (Native AOT): a native program does not read its own file again after it starts, so an
+       update can rename it aside while a session still runs it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Version>4.2.2</Version>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>NexusInDesignLauncher</AssemblyName>
+    <RootNamespace>NexusInDesign.Launcher</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+</Project>

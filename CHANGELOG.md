@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.2.2] - 2026-11-07
+
+### Fixed
+- A conversation opened before an update keeps working. The engine is a self-contained single-file .NET program that
+  reads its own file again each time it loads an assembly; `get.ps1` renamed the running engine aside and put the new
+  version at its path, so the open session then read the new version's bytes and its next tool calls failed with
+  "Internal error" (reproduced: `search_official_dom` and `indesign_doctor` after a replacement). Each version is now
+  installed in `versions\<version>-<hash>\`, a folder never modified once written; `current.txt` names the version new
+  sessions start; `NexusInDesign.exe`, the path the plugins start, is a small launcher compiled ahead of time (Native
+  AOT, which never reads its own file again) that runs the engine `current.txt` names. An older version's folder is
+  removed by a later run once no process runs its engine. Sessions opened before 4.2.2 still run the previous engine
+  from the launcher's path and need one reconnection after this update.
+
 ## [4.2.1] - 2026-11-07
 
 ### Fixed
