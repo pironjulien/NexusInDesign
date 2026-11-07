@@ -100,7 +100,9 @@ public sealed class ReleaseTests : IDisposable
         // What an antivirus does to a freshly written executable: opens it for a moment. Without delete sharing that
         // blocks renaming its staged folder into place (versions\.new-<id> to versions\<version>-<hash>); get.ps1
         // waits that hold out instead of failing ("being used by another process", seen once with NexusAGYmail in
-        // NexusSystem's pack job on a fresh Windows runner). An update writes another engine: the rebuilt package.
+        // NexusSystem's pack job on a fresh Windows runner). Here the staged folder itself is held, from its creation
+        // (before the engine is even copied into it), so the hold always overlaps the rename. An update writes another
+        // engine: the rebuilt package.
         string zip = update ? Packages.Rebuilt : Packages.Current;
         string home = Path.Combine(root, "home");
         if (update)
@@ -108,37 +110,28 @@ public sealed class ReleaseTests : IDisposable
             var first = Get(shell, Packages.Current, home);
             Assert.True(first.Code == 0, first.Output);
         }
-        else Directory.CreateDirectory(home);
+        string versions = Directory.CreateDirectory(Path.Combine(home, "versions")).FullName;
 
         string? held = null;
         bool stagedWhileHeld = false;
         using var released = new ManualResetEventSlim();
-        using var watcher = new FileSystemWatcher(home, "NexusInDesign.exe") { IncludeSubdirectories = true };
+        using var watcher = new FileSystemWatcher(versions, ".new-*") { NotifyFilter = NotifyFilters.DirectoryName };
         var scanner = new Thread(() =>
         {
-            string path = "";
-            var waiting = Stopwatch.StartNew();
-            while (path.Length == 0 && waiting.Elapsed < TimeSpan.FromSeconds(60))
-                if (watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change && change.Name!.Contains(".new-", StringComparison.Ordinal))
-                    path = Path.Combine(home, change.Name!);
+            string path = watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change ? Path.Combine(versions, change.Name!) : "";
             var deadline = Stopwatch.StartNew();
-            while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && File.Exists(path))
+            while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && Directory.Exists(path))
             {
-                try
-                {
-                    using var scan = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    held = path;
-                    Thread.Sleep(2_000);
-                    stagedWhileHeld = File.Exists(path);
-                }
-                catch (IOException) { Thread.Yield(); }  // still being copied
-                catch (UnauthorizedAccessException) { Thread.Yield(); }
+                using var scan = Native.OpenFolder(path);
+                if (scan.IsInvalid) { Thread.Yield(); continue; }
+                held = path;
+                Thread.Sleep(2_000);
+                stagedWhileHeld = Directory.Exists(path);
             }
             released.Set();
         }) { IsBackground = true };
         watcher.EnableRaisingEvents = true;
         scanner.Start();
-
         var (code, output) = Get(shell, zip, home);
         Assert.True(released.Wait(60_000, TestContext.Current.CancellationToken));
         Assert.True(code == 0, output);

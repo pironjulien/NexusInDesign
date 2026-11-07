@@ -8,6 +8,8 @@
     <IsTestProject>true</IsTestProject>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <RootNamespace>NexusInDesign.Tests</RootNamespace>
+    <!-- Native.cs: LibraryImport (a scanner's hold on a folder). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.2" />
