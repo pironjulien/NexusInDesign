@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Strict build: recommended .NET analyzers, code style enforced, warnings as errors (`.editorconfig` added).
+- JsonSchema.Net 9.6.0.
+- Release workflow on NexusSystem's shared workflows v1.6.54, pinned by commit SHA.
+- CHANGELOG compare links for every released version.
+
 ## [4.1.5] - 2026-11-04
 
 ### Changed
@@ -168,3 +174,15 @@ listener, so NexusSystem can install it like the other Nexus products.
 
 ### Removed
 - The former HTTP server and declarative tests.
+
+[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.5...HEAD
+[4.1.5]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.4...v4.1.5
+[4.1.4]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.3...v4.1.4
+[4.1.3]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.2...v4.1.3
+[4.1.2]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.1...v4.1.2
+[4.1.1]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.0...v4.1.1
+[4.1.0]: https://github.com/pironjulien/NexusInDesign/compare/v4.0.2...v4.1.0
+[4.0.2]: https://github.com/pironjulien/NexusInDesign/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/pironjulien/NexusInDesign/compare/v4.0.0...v4.0.1
+[4.0.0]: https://github.com/pironjulien/NexusInDesign/compare/v3.2.2...v4.0.0
+[3.2.2]: https://github.com/pironjulien/NexusInDesign/releases/tag/v3.2.2

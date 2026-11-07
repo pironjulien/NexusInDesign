@@ -43,7 +43,7 @@ public sealed class ReleaseTests : IDisposable
         Assert.Contains(@"%USERPROFILE%\.nexus\nexus-indesign", codex["args"]!.ToJsonString().Replace(@"\\", @"\"));
         Assert.Equal("./.codex-mcp.json", Json.Str(ReadJson("plugin", ".codex-plugin", "plugin.json"), "mcpServers"));
         Assert.True(File.Exists(Repository.File("plugin", "skills", "nexus-indesign", "SKILL.md")));
-        foreach (string file in Directory.EnumerateFiles(Repository.File("plugin"), "*", SearchOption.AllDirectories).Where(file => file.EndsWith(".json") || file.EndsWith(".md")))
+        foreach (string file in Directory.EnumerateFiles(Repository.File("plugin"), "*", SearchOption.AllDirectories).Where(file => file.EndsWith(".json", StringComparison.Ordinal) || file.EndsWith(".md", StringComparison.Ordinal)))
             Assert.DoesNotMatch(@"\bnode(\.exe)?\b|\.ccx|bridge_open_pairing|INDESIGN_MCP_TOKEN_FILE", File.ReadAllText(file));
     }
 
@@ -64,7 +64,7 @@ public sealed class ReleaseTests : IDisposable
             Assert.DoesNotMatch(forbidden, File.ReadAllText(Repository.File(file)));
     }
 
-    private (int Code, string Output) Get(string shell, string zip, string home, params string[] args)
+    private static (int Code, string Output) Get(string shell, string zip, string home, params string[] args)
     {
         var info = new ProcessStartInfo(shell) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
         foreach (string argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", Repository.File("get.ps1") }.Concat(args)) info.ArgumentList.Add(argument);

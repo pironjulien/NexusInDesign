@@ -28,9 +28,9 @@ internal static class Samples
         builder.Append("2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n");
         int xref = builder.Length;
         builder.Append("xref\n0 3\n0000000000 65535 f \n");
-        builder.Append($"{catalog:D10} 00000 n \n{pages:D10} 00000 n \n");
+        builder.Append(System.Globalization.CultureInfo.InvariantCulture, $"{catalog:D10} 00000 n \n{pages:D10} 00000 n \n");
         builder.Append("trailer\n<< /Size 3 /Root 1 0 R >>\n");
-        builder.Append($"startxref\n{xref}\n%%EOF\n");
+        builder.Append(System.Globalization.CultureInfo.InvariantCulture, $"startxref\n{xref}\n%%EOF\n");
         File.WriteAllText(path, builder.ToString(), Encoding.Latin1);
     }
 

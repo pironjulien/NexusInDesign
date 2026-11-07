@@ -67,7 +67,7 @@ internal sealed class FakeInDesign : IInDesignHost
 
     private static string Native(string? uxpPath) => uxpPath!.Replace('/', '\\');
 
-    private JsonObject State(Document document) => new()
+    private static JsonObject State(Document document) => new()
     {
         ["documentId"] = document.Id, ["revision"] = document.Revision, ["stateToken"] = Token(document),
     };

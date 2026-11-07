@@ -6,6 +6,8 @@ namespace NexusInDesign.Tests;
 
 public sealed class HostAndTemplateTests
 {
+    private static readonly string[] ActionScripts = ["export-pdf-action.js", "export-png-action.js", "export-idml-action.js", "package-action.js"];
+
     private static string TestMutex() => $@"Local\NexusInDesignAutomation.Test.{Guid.NewGuid():D}";
 
     private static ScriptRun GuardOnly(Action guard) => new("status.js", ScriptLanguage.Uxp, @"C:\nowhere.idjs", null, TimeSpan.FromSeconds(5), [])
@@ -102,7 +104,7 @@ public sealed class HostAndTemplateTests
         var inputs = SampleInputs(template);
         if (template == "export-document.js")
         {
-            string actions = string.Join("\n", new[] { "export-pdf-action.js", "export-png-action.js", "export-idml-action.js", "package-action.js" }
+            string actions = string.Join("\n", ActionScripts
                 .Select(action => "  {\n" + UxpTemplates.Render(action, inputs).TrimEnd('\n') + "\n  }"));
             inputs["exportAction"] = actions;
         }

@@ -12,7 +12,7 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="JsonSchema.Net" Version="9.5.0" />
+    <PackageReference Include="JsonSchema.Net" Version="9.6.0" />
     <!-- GDI+ (Windows) downscales the preview PNGs into the capped thumbnails returned as MCP image content. -->
     <PackageReference Include="System.Drawing.Common" Version="10.0.14" />
     <EmbeddedResource Include="tool-contracts.json" LogicalName="tool-contracts.json" />

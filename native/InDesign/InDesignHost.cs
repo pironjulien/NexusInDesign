@@ -332,6 +332,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
     }
 
     /// <summary>One STA thread, its queue and the mutex it owns.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "The STA thread owns the queue: Stop completes it and the thread drains it; disposing it from another thread would race the consumer.")]
     private sealed class Worker
     {
         private readonly System.Collections.Concurrent.BlockingCollection<Action> queue = new();
