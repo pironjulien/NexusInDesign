@@ -11,6 +11,7 @@ automation: every change checked, every document backed up first, every export v
 
 [![Tests](https://github.com/pironjulien/NexusInDesign/actions/workflows/tests.yml/badge.svg)](https://github.com/pironjulien/NexusInDesign/actions/workflows/tests.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pironjulien/NexusInDesign/badge)](https://scorecard.dev/viewer/?uri=github.com/pironjulien/NexusInDesign)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16438/badge)](https://www.bestpractices.dev/projects/16438)
 [![release](https://img.shields.io/github/v/release/pironjulien/NexusInDesign?style=flat-square&label=release)](https://github.com/pironjulien/NexusInDesign/releases/latest)
 [![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square)](#-quick-start)
 [![InDesign 2024–2026](https://img.shields.io/badge/InDesign-2024%E2%80%932026-FF3366?style=flat-square)](#-quick-start)
