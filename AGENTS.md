@@ -18,6 +18,10 @@
   to `JsonNode` (the generic overload is not AOT-safe); the AOT publish fails on any such warning. Publishing needs the
   C++ linker, found through `vswhere`: `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer` on `PATH`
   (tools/package.ps1 and the tests add it).
+- Never start the real InDesign under a redirected profile (`APPDATA` / `LOCALAPPDATA` in a temporary folder) for a
+  smoke test: Creative Cloud starts its background services (CoreSync, CC Library…) on that profile, and they keep its
+  databases locked, so the folder can only be removed after a reboot. Check a release build through its MCP tools with
+  the real profile and no document open, or through the unit tests' fakes.
 - The `nexus-indesign` skill (`plugin/skills`) serves Codex and Claude Code: no instruction specific to one agent.
 - After a significant change: update `CHANGELOG.md` (English, Keep a Changelog), run `test.ps1`, check the diff and
   the absence of secrets, then commit precise files with an English message.
