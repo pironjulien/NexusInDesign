@@ -132,28 +132,33 @@ public sealed class ReleaseTests : IDisposable
         string? held = null;
         bool stagedWhileHeld = false;
         using var released = new ManualResetEventSlim();
-        using var watcher = new FileSystemWatcher(versions, ".new-*") { NotifyFilter = NotifyFilters.DirectoryName };
-        // Subscribed before the watcher starts raising events and before the installer runs: WaitForChanged inside the
-        // thread would subscribe only once the thread runs, and a creation in between was lost (held stayed null).
-        var created = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        watcher.Created += (_, e) => created.TrySetResult(e.FullPath);
+        using var scanning = new ManualResetEventSlim();
+        var installed = false;
+        // A dedicated high-priority thread that looks for the staged folder itself, started before the installer: a
+        // FileSystemWatcher's events (and a thread waiting on them) come late on a loaded CI runner, after the staged
+        // copy had already been renamed into place (held stayed null).
         var scanner = new Thread(() =>
         {
-            string path = created.Task.Wait(60_000) ? created.Task.Result : "";
+            scanning.Set();
             var deadline = Stopwatch.StartNew();
-            while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && Directory.Exists(path))
+            while (held is null && !Volatile.Read(ref installed) && deadline.Elapsed < TimeSpan.FromSeconds(60))
             {
-                using var scan = Native.OpenFolder(path);
-                if (scan.IsInvalid) { Thread.Yield(); continue; }
-                held = path;
-                Thread.Sleep(2_000);
-                stagedWhileHeld = Directory.Exists(path);
+                foreach (string path in Directory.EnumerateDirectories(versions, ".new-*"))
+                {
+                    using var scan = Native.OpenFolder(path);
+                    if (scan.IsInvalid) continue;
+                    held = path;
+                    Thread.Sleep(2_000);
+                    stagedWhileHeld = Directory.Exists(path);
+                    break;
+                }
             }
             released.Set();
-        }) { IsBackground = true };
-        watcher.EnableRaisingEvents = true;
+        }) { IsBackground = true, Priority = ThreadPriority.Highest };
         scanner.Start();
+        Assert.True(scanning.Wait(10_000, TestContext.Current.CancellationToken));
         var (code, output) = Get(shell, zip, home);
+        Volatile.Write(ref installed, true);
         Assert.True(released.Wait(60_000, TestContext.Current.CancellationToken));
         Assert.True(code == 0, output);
         Assert.NotNull(held);
