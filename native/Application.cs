@@ -27,6 +27,7 @@ internal sealed class Application
     private ToolError? bridgeError;
     private PathPolicy? pathPolicy;
     private AuditLogger audit = new(null);
+    private readonly CommonJournal journal;
 
     public Application(Config config, IParentVerifier parentVerifier, IInDesignHost host)
     {
@@ -34,15 +35,17 @@ internal sealed class Application
         this.parentVerifier = parentVerifier;
         this.host = host;
         Catalog = ToolCatalog.Shared;
+        journal = new CommonJournal(config.JournalRoot, Environment.GetEnvironmentVariable("NEXUS_AGENT"));
     }
 
     public ToolCatalog Catalog { get; }
+    internal CommonJournal Journal => journal;
     internal SilentBridge? Bridge => bridge;
     public int QueueLength => Volatile.Read(ref queued);
 
     public void Start()
     {
-        parentVerifier.Verify();
+        if (CommonJournal.FromName(Path.GetFileName(Json.Str(parentVerifier.Verify(), "executablePath"))) is { } agent) journal.Agent = agent;
         PrivateAcl.PrepareDirectory(config.PrivateRoot);
         string auditDirectory = PrivateAcl.PrepareDirectory(Path.GetDirectoryName(config.AuditFile)!);
         string auditFile = Path.Combine(auditDirectory, Path.GetFileName(config.AuditFile));
@@ -92,6 +95,7 @@ internal sealed class Application
         catch (Exception exception)
         {
             var error = ToolError.From(exception);
+            journal.Write(name, CommonJournal.IssueOf(error.Code, false), started.Elapsed.TotalMilliseconds, tool.Route, error.Code);
             TryAudit(new AuditLogger.Event("tool_call", name, "validation_error")
             {
                 DocumentId = documentId, ExpectedRevision = revision, Reason = reason, ErrorCode = error.Code, DurationMs = started.ElapsedMilliseconds,
@@ -104,6 +108,7 @@ internal sealed class Application
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
+            journal.Write(name, "✗", started.Elapsed.TotalMilliseconds, tool.Route, "AUDIT_UNAVAILABLE");
             return Error(new ToolError("AUDIT_UNAVAILABLE", Strings.T("the command was not sent to InDesign because the start journal is unavailable.", "la commande n’a pas été envoyée à InDesign car le journal de début est indisponible.")));
         }
 
@@ -123,6 +128,7 @@ internal sealed class Application
         catch (Exception exception)
         {
             var error = ToolError.From(exception);
+            journal.Write(name, CommonJournal.IssueOf(error.Code, error.RequiresInspection), started.Elapsed.TotalMilliseconds, tool.Route, error.Code, error.OperationId);
             TryAudit(new AuditLogger.Event("tool_call", name, "error")
             {
                 DocumentId = documentId, ExpectedRevision = revision, Reason = reason, ErrorCode = error.Code, DurationMs = started.ElapsedMilliseconds,
@@ -151,6 +157,7 @@ internal sealed class Application
         {
             result["auditWarning"] ??= Strings.T("The InDesign result is valid, but the final event could not be written to the audit journal.", "Le résultat InDesign est valide, mais l’événement final n’a pas pu être écrit dans le journal d’audit.");
         }
+        journal.Write(name, Json.IsTrue(result, "requiresInspection") ? "~" : "✓", started.Elapsed.TotalMilliseconds, tool.Route, null, Json.Str(result, "operationId"));
         var previews = Thumbnails.PreviewPaths(name, result);
         var images = previews.Take(Thumbnails.MaxImages).Select(Thumbnails.Image).OfType<JsonObject>().ToList();
         if (previews.Count > 0)

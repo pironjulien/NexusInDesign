@@ -15,6 +15,8 @@ internal sealed record Config
     public required string BackupRoot { get; init; }
     public required string AuditFile { get; init; }
     public required string RuntimeRoot { get; init; }
+    /// <summary>Common journal of the Nexus tools (NEXUS_JOURNAL_HOME, else %USERPROFILE%\.nexus\journal).</summary>
+    public string JournalRoot { get; init; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nexus", "journal");
     public required IReadOnlyList<string> ReadRoots { get; init; }
     public required IReadOnlyList<string> WriteRoots { get; init; }
     public required IReadOnlyList<string> DeniedRoots { get; init; }
@@ -77,6 +79,7 @@ internal sealed record Config
             BackupRoot = backupRoot,
             AuditFile = auditFile,
             RuntimeRoot = Path.Combine(privateRoot, "runtime", "silent-runtime"),
+            JournalRoot = Env("NEXUS_JOURNAL_HOME") is { Length: > 0 } journal ? journal : Path.Combine(profile, ".nexus", "journal"),
             ReadRoots = readRoots,
             WriteRoots = writeRoots,
             DeniedRoots = denied.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),

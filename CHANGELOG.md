@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.2.3] - 2026-11-08
+
+### Added
+- Common journal of the Nexus tools (format v1): every tool call also writes one short line to
+  `%USERPROFILE%\.nexus\journal\indesign\<agent>\<YYYY-MM>.jsonl` (agent from the verified parent or the MCP
+  client; `outil` the engine version, `issue`, `ms`, `technique` the tool's route, `erreur` the stable error code;
+  never a path, a document name or a text), so NexusSystem shows the activity of your AIs in InDesign and
+  `NexusJournal revue` can measure failures per tool and version. A test checks the line of each call.
+
 ### Fixed
 - Tests: no test can show a Windows error box. The test process sets the error mode (no critical-error, crash or
   missing-file box) when it loads, and every process it starts inherits it; a test checks it in a child process.
@@ -211,7 +220,8 @@ listener, so NexusSystem can install it like the other Nexus products.
 ### Removed
 - The former HTTP server and declarative tests.
 
-[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.2...HEAD
+[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.3...HEAD
+[4.2.3]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.2...v4.2.3
 [4.2.2]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.1...v4.2.2
 [4.2.1]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.0...v4.2.1
 [4.2.0]: https://github.com/pironjulien/NexusInDesign/compare/v4.1.5...v4.2.0

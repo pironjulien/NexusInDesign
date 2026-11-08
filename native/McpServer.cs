@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using NexusInDesign.Security;
 
 namespace NexusInDesign;
 
@@ -68,6 +69,7 @@ internal sealed class McpServer(Application application)
             case "initialize":
             {
                 string requested = Json.Str(request["params"], "protocolVersion") ?? "";
+                if (Environment.GetEnvironmentVariable("NEXUS_AGENT") is not { Length: > 0 } && CommonJournal.FromName(Json.Str(request["params"]?["clientInfo"], "name")) is { } client) application.Journal.Agent = client;
                 return Result(id, new JsonObject
                 {
                     ["protocolVersion"] = Protocols.Contains(requested) ? requested : Protocols[^1],
