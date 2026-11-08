@@ -10,8 +10,16 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- InDesign is driven through its COM automation server (late-bound IDispatch). -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <!-- Both release architectures in the restore graph, so packages.lock.json covers the release publishes. -->
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- The package below is pinned on purpose (see there): its "delete explicit reference" notice is answered. -->
+    <SuppressILLinkExplicitPackageReferenceWarning>true</SuppressILLinkExplicitPackageReferenceWarning>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The trimmer's tasks, which the self-contained single-file publish adds: pinned like any package
+         (packages.lock.json, Dependabot); left implicit, their version would follow the .NET SDK of the machine and
+         break the locked restore whenever the CI's SDK moves. -->
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="10.0.14" />
     <PackageReference Include="JsonSchema.Net" Version="9.6.0" />
     <!-- GDI+ (Windows) downscales the preview PNGs into the capped thumbnails returned as MCP image content. -->
     <PackageReference Include="System.Drawing.Common" Version="10.0.14" />

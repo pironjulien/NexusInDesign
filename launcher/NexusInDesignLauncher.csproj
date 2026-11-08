@@ -15,5 +15,16 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Both release architectures in the restore graph, so packages.lock.json covers the release publishes. -->
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- The two packages below are pinned on purpose (see there): their "delete explicit reference" notice is answered. -->
+    <SuppressGenerateILCompilerExplicitPackageReferenceWarning>true</SuppressGenerateILCompilerExplicitPackageReferenceWarning>
+    <SuppressILLinkExplicitPackageReferenceWarning>true</SuppressILLinkExplicitPackageReferenceWarning>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The AOT compiler and the trimmer, pinned like any package (packages.lock.json, Dependabot): left implicit, their
+         version would follow the .NET SDK of the machine and break the locked restore whenever the CI's SDK moves. -->
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.14" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="10.0.14" />
+  </ItemGroup>
 </Project>
