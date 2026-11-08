@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Tests: the error-mode check in a child process expects only the two bits always inherited
+  (`SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX`): the runtime briefly sets exactly those two while it loads a
+  native library on another thread, so a child started in that window lacked `SEM_NOGPFAULTERRORBOX` and the check
+  failed now and then in CI. The full mode is still checked in the test process right after it is set. Setting the
+  mode again right before each process start (4.3.0) did not close that window; tests start their processes with
+  `Process.Start` again.
+- Tests: the release packages the tests build (`%TEMP%\nexusindesign-get\package-<id>`) are deleted when the test
+  run ends; one was left behind by every run.
+
 ## [4.3.0] - 2026-11-08
 
 ### Changed

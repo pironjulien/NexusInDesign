@@ -147,7 +147,7 @@ public sealed class HostAndTemplateTests
             files.Add(backup);
             foreach (string file in files)
             {
-                using var process = NoErrorBoxes.Start(new ProcessStartInfo(node, $"--check \"{file}\"") { RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true });
+                using var process = Process.Start(new ProcessStartInfo(node, $"--check \"{file}\"") { RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true })!;
                 string error = process.StandardError.ReadToEnd();
                 process.WaitForExit();
                 Assert.True(process.ExitCode == 0, $"{Path.GetFileName(file)}: {error}");

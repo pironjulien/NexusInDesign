@@ -2,11 +2,14 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 
+[assembly: AssemblyFixture(typeof(NexusInDesign.Tests.PackagesCleanup))]
+
 namespace NexusInDesign.Tests;
 
 /// <summary>
 /// Packages like a release's, built once per test run: the engine and the launcher published as in tools/package.ps1
-/// (both Native AOT), zipped together; and get.ps1 run on such a package.
+/// (both Native AOT), zipped together; and get.ps1 run on such a package. Deleted when the test run ends
+/// (<see cref="PackagesCleanup"/>).
 /// </summary>
 internal static class Packages
 {
@@ -22,7 +25,7 @@ internal static class Packages
         // Native AOT links with the Visual C++ tools, which it finds through vswhere.exe.
         string vswhere = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer");
         info.Environment["PATH"] = Environment.GetEnvironmentVariable("PATH") + Path.PathSeparator + vswhere;
-        using var process = NoErrorBoxes.Start(info);
+        using var process = Process.Start(info)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(900_000) || process.ExitCode != 0) throw new InvalidOperationException($"dotnet publish {Path.GetFileName(project)} failed: " + stdout.Result + error.Result);
@@ -71,6 +74,12 @@ internal static class Packages
     /// <summary>Another package of this version, with another engine file.</summary>
     public static string Rebuilt => rebuilt.Value;
 
+    /// <summary>Deletes this run's folder, if a test built anything.</summary>
+    public static void Delete()
+    {
+        if (Directory.Exists(Work)) Directory.Delete(Work, recursive: true);
+    }
+
     public static (int Code, string Output) Get(string shell, string zip, string home, params string[] args)
     {
         var info = new ProcessStartInfo(shell) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
@@ -79,11 +88,17 @@ internal static class Packages
         info.Environment["NEXUS_INDESIGN_HOME"] = home;
         info.Environment["NEXUS_PACK"] = "1";
         info.Environment.Remove("NEXUS_RELEASE_TAG");
-        using var process = NoErrorBoxes.Start(info);
+        using var process = Process.Start(info)!;
         process.StandardInput.Close();
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         Assert.True(process.WaitForExit(120_000), "get.ps1 did not finish");
         return (process.ExitCode, output.Result + error.Result);
     }
+}
+
+/// <summary>Deletes the packages built by this test run once every test has run.</summary>
+public sealed class PackagesCleanup : IDisposable
+{
+    public void Dispose() => Packages.Delete();
 }

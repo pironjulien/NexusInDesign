@@ -1,6 +1,7 @@
 # Dependabot: weekly updates of the pinned GitHub Actions (SHA + version comment) and of the project's dependencies.
 # A 7-day cooldown lets a compromised release be caught before it is proposed (zizmor dependabot-cooldown).
-# NuGet: the engine (native/NexusInDesign.csproj) and its tests (tests/NexusInDesign.Tests.csproj).
+# NuGet: the engine (native/NexusInDesign.csproj), its launcher (launcher/NexusInDesignLauncher.csproj) and its tests
+# (tests/NexusInDesign.Tests.csproj).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -13,7 +14,7 @@ updates:
       actions:
         patterns: ["*"]
   - package-ecosystem: nuget
-    directories: ["/native", "/tests"]
+    directories: ["/native", "/launcher", "/tests"]
     schedule:
       interval: weekly
     cooldown:
