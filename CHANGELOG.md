@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [4.3.0] - 2026-11-08
+
+### Changed
+- The engine is compiled ahead of time (Native AOT) instead of a self-contained single-file .NET program: one native
+  image that Windows maps, nothing read again from its file after it starts, so an update that replaces the engine
+  while an AI session runs it can no longer break that session (NexusFree's single-file dispatcher still crashed after
+  such a replacement, on an assembly loaded late that no preload had reached). Measured on the same PC (win-x64,
+  median of 7 runs, MCP server 10 s after `initialize` and `tools/list`):
+
+  | | 4.2.3 (single file) | 4.3.0 (Native AOT) |
+  |---|---|---|
+  | `NexusInDesign.exe` | 73.6 MB | 8.8 MB |
+  | `--version` | 42 ms | 24 ms |
+  | Start to `initialize` answer | 224 ms | 93 ms |
+  | Working set at rest | 47.8 MB | 25.2 MB |
+  | Private bytes at rest | 16.0 MB | 11.3 MB |
+
+- InDesign's COM automation goes through a source-generated `IDispatch` (ComWrappers) instead of the runtime's
+  built-in COM interop and `Type.InvokeMember`; JSON through source-generated contexts; process and signature checks
+  through `LibraryImport` with blittable structures. No reflection or runtime marshalling is left (`IsAotCompatible`,
+  AOT and trim analysis clean, warnings as errors). The AOT compiler and the trimmer are pinned in
+  `packages.lock.json`.
+
+### Added
+- Test: the release build is started, its file renamed aside and replaced by other bytes the way an installer
+  replaces an exe in use, and its tools (tool list, DOM index, doctor, schema validation) must still answer.
+
 ## [4.2.3] - 2026-11-08
 
 ### Added
@@ -220,7 +247,8 @@ listener, so NexusSystem can install it like the other Nexus products.
 ### Removed
 - The former HTTP server and declarative tests.
 
-[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.3...HEAD
+[Unreleased]: https://github.com/pironjulien/NexusInDesign/compare/v4.3.0...HEAD
+[4.3.0]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.3...v4.3.0
 [4.2.3]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.2...v4.2.3
 [4.2.2]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.1...v4.2.2
 [4.2.1]: https://github.com/pironjulien/NexusInDesign/compare/v4.2.0...v4.2.1

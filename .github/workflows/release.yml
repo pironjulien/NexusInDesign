@@ -1,7 +1,7 @@
 # Release, in two channels, with the shared Nexus release workflows of NexusSystem.
 # - Development: every push to main checks one version everywhere (native/Program.cs, the csproj, the plugin, its
 #   manifests, server.json and CHANGELOG.md), runs test.ps1 and builds the release files with tools/package.ps1:
-#   NexusInDesign-win-x64.zip and NexusInDesign-win-arm64.zip (self-contained NexusInDesign.exe), the MCP bundles
+#   NexusInDesign-win-x64.zip and NexusInDesign-win-arm64.zip (NexusInDesign.exe, Native AOT), the MCP bundles
 #   nexus-indesign-X.Y.Z-win-x64.mcpb and nexus-indesign-X.Y.Z-win-arm64.mcpb, get.ps1 and SHA256SUMS.txt.
 #   product-dev-release attests them (Sigstore, keyless: `gh attestation verify <file> --repo pironjulien/NexusInDesign`)
 #   and publishes the pre-release vX.Y.Z-dev.N (NexusSystem's development channel).

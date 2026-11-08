@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 namespace NexusInDesign.Tests;
 
 /// <summary>
-/// Packages like a release's, built once per test run: the engine published as in tools/package.ps1 (self-contained,
-/// single file) and the launcher (Native AOT), zipped together; and get.ps1 run on such a package.
+/// Packages like a release's, built once per test run: the engine and the launcher published as in tools/package.ps1
+/// (both Native AOT), zipped together; and get.ps1 run on such a package.
 /// </summary>
 internal static class Packages
 {
@@ -32,7 +32,9 @@ internal static class Packages
     {
         string engine = Path.Combine(Work, "engine");
         string launcher = Path.Combine(Work, "launcher");
-        Publish(Repository.File("native", "NexusInDesign.csproj"), engine, "--self-contained", "true", "-p:PublishSingleFile=true", "-p:IncludeNativeLibrariesForSelfExtract=true");
+        Publish(Repository.File("native", "NexusInDesign.csproj"), engine);
+        // Native AOT: one native image, nothing beside it to load later.
+        Assert.Equal(["NexusInDesign.exe"], Directory.GetFiles(engine).Select(Path.GetFileName));
         Publish(Repository.File("launcher", "NexusInDesignLauncher.csproj"), launcher);
         return (Path.Combine(engine, "NexusInDesign.exe"), Path.Combine(launcher, "NexusInDesignLauncher.exe"));
     });
@@ -51,15 +53,17 @@ internal static class Packages
 
     private static readonly Lazy<string> current = new(() => Zip("current", Built.Value.Engine));
 
-    // The same version built another way (a compressed single-file bundle): another engine file whose assemblies sit
-    // at other offsets, as in any new build. A session that read it in place of its own would load garbage.
+    // The same version built another way (optimized for size): another engine file whose code sits at other offsets,
+    // as in any new build. A session that read it in place of its own would run garbage.
     private static readonly Lazy<string> rebuilt = new(() =>
     {
-        string engine = Path.Combine(Work, "engine-compressed");
-        Publish(Repository.File("native", "NexusInDesign.csproj"), engine, "--self-contained", "true", "-p:PublishSingleFile=true",
-            "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true");
+        string engine = Path.Combine(Work, "engine-size");
+        Publish(Repository.File("native", "NexusInDesign.csproj"), engine, "-p:OptimizationPreference=Size");
         return Zip("rebuilt", Path.Combine(engine, "NexusInDesign.exe"));
     });
+
+    /// <summary>The engine of the release build (Native AOT), as tools/package.ps1 publishes it.</summary>
+    public static string Engine => Built.Value.Engine;
 
     /// <summary>The package of this version.</summary>
     public static string Current => current.Value;

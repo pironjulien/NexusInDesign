@@ -29,7 +29,7 @@ internal sealed class ToolCatalog
             ?? throw new InvalidOperationException("Tool contracts missing.");
         using var frenchStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("tool-contracts.fr.json")
             ?? throw new InvalidOperationException("French tool texts missing.");
-        French = JsonSerializer.Deserialize<Dictionary<string, string>>(frenchStream)
+        French = JsonSerializer.Deserialize(frenchStream, JsonContext.Default.DictionaryStringString)
             ?? throw new InvalidOperationException("French tool texts unreadable.");
         foreach (var node in JsonNode.Parse(stream)!.AsArray().OfType<JsonObject>())
         {

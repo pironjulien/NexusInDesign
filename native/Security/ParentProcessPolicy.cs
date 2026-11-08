@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
@@ -22,7 +23,7 @@ internal interface IParentVerifier
 /// Anthropic or codex.exe signed by OpenAI (by default), with a valid Authenticode signature, in an allowed folder.
 /// Any other local program that runs the executable is refused before InDesign is touched.
 /// </summary>
-internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, IReadOnlyList<string> allowedPaths, int? parentProcessId = null) : IParentVerifier
+internal sealed partial class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, IReadOnlyList<string> allowedPaths, int? parentProcessId = null) : IParentVerifier
 {
     public JsonObject Verify()
     {
@@ -82,7 +83,7 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
         if (snapshot == new IntPtr(-1)) return map;
         try
         {
-            var entry = new PROCESSENTRY32W { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32W>() };
+            var entry = new PROCESSENTRY32W { dwSize = (uint)Unsafe.SizeOf<PROCESSENTRY32W>() };
             if (!Process32FirstW(snapshot, ref entry)) return map;
             do map[(int)entry.th32ProcessID] = (int)entry.th32ParentProcessID;
             while (Process32NextW(snapshot, ref entry));
@@ -102,7 +103,10 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
         {
             var buffer = new char[32768];
             int size = buffer.Length;
-            return QueryFullProcessImageNameW(handle, 0, buffer, ref size) ? new string(buffer, 0, size) : null;
+            unsafe
+            {
+                fixed (char* name = buffer) return QueryFullProcessImageNameW(handle, 0, name, ref size) ? new string(buffer, 0, size) : null;
+            }
         }
         finally
         {
@@ -126,33 +130,28 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
     }
 
     /// <summary>WinVerifyTrust (Authenticode policy, no UI, no network revocation check).</summary>
-    internal static bool SignatureValid(string path)
+    internal static unsafe bool SignatureValid(string path)
     {
-        var file = new WINTRUST_FILE_INFO { cbStruct = (uint)Marshal.SizeOf<WINTRUST_FILE_INFO>(), pcwszFilePath = path };
-        IntPtr fileInfo = Marshal.AllocHGlobal(Marshal.SizeOf<WINTRUST_FILE_INFO>());
-        try
+        fixed (char* filePath = path)
         {
-            Marshal.StructureToPtr(file, fileInfo, false);
+            var file = new WINTRUST_FILE_INFO { cbStruct = (uint)sizeof(WINTRUST_FILE_INFO), pcwszFilePath = filePath };
             var data = new WINTRUST_DATA
             {
-                cbStruct = (uint)Marshal.SizeOf<WINTRUST_DATA>(),
+                cbStruct = (uint)sizeof(WINTRUST_DATA),
                 dwUIChoice = 2,          // WTD_UI_NONE
                 fdwRevocationChecks = 0, // WTD_REVOKE_NONE
                 dwUnionChoice = 1,       // WTD_CHOICE_FILE
-                pFile = fileInfo,
+                pFile = (IntPtr)(&file),
                 dwStateAction = 0,
                 dwProvFlags = 0x00000080, // WTD_REVOCATION_CHECK_NONE
             };
             var action = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE"); // WINTRUST_ACTION_GENERIC_VERIFY_V2
             return WinVerifyTrust(new IntPtr(-1), ref action, ref data) == 0;
         }
-        finally
-        {
-            Marshal.FreeHGlobal(fileInfo);
-        }
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    // Blittable structures: their layout is the native one, nothing is marshalled at run time (Native AOT).
+    [StructLayout(LayoutKind.Sequential)]
     private struct PROCESSENTRY32W
     {
         public uint dwSize, cntUsage, th32ProcessID;
@@ -160,14 +159,20 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
         public uint th32ModuleID, cntThreads, th32ParentProcessID;
         public int pcPriClassBase;
         public uint dwFlags;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szExeFile;
+        public ExeName szExeFile;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct WINTRUST_FILE_INFO
+    [InlineArray(260)]
+    private struct ExeName
+    {
+        private ushort first; // WCHAR, as ushort: char is not blittable for the generated marshaller
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private unsafe struct WINTRUST_FILE_INFO
     {
         public uint cbStruct;
-        [MarshalAs(UnmanagedType.LPWStr)] public string pcwszFilePath;
+        public char* pcwszFilePath;
         public IntPtr hFile, pgKnownSubject;
     }
 
@@ -184,13 +189,13 @@ internal sealed class ParentProcessPolicy(IReadOnlyList<AllowedParent> allowed, 
         public IntPtr pSignatureSettings;
     }
 
-    [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
-    [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
-    [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr OpenProcess(uint access, bool inherit, int processId);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool QueryFullProcessImageNameW(IntPtr process, uint flags, [Out] char[] name, ref int size);
-    [DllImport("wintrust.dll", CharSet = CharSet.Unicode)] private static extern int WinVerifyTrust(IntPtr window, ref Guid action, ref WINTRUST_DATA data);
+    [LibraryImport("kernel32.dll", SetLastError = true)] private static partial IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
+    [LibraryImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+    [LibraryImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+    [LibraryImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool CloseHandle(IntPtr handle);
+    [LibraryImport("kernel32.dll", SetLastError = true)] private static partial IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+    [LibraryImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static unsafe partial bool QueryFullProcessImageNameW(IntPtr process, uint flags, char* name, ref int size);
+    [LibraryImport("wintrust.dll")] private static partial int WinVerifyTrust(IntPtr window, ref Guid action, ref WINTRUST_DATA data);
 }
 
 /// <summary>Ends the server when the agent that started it is gone (same PID and start time no longer running).</summary>

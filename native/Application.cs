@@ -163,7 +163,7 @@ internal sealed class Application
         if (previews.Count > 0)
             result["thumbnails"] = new JsonObject { ["returned"] = images.Count, ["previews"] = previews.Count, ["maxSide"] = Thumbnails.MaxSide };
         var content = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = result.ToJsonString(Json.Compact) });
-        foreach (var image in images) content.Add(image);
+        foreach (var image in images) content.Add((JsonNode)image);
         return new JsonObject { ["content"] = content, ["structuredContent"] = result };
     }
 
@@ -564,7 +564,7 @@ internal sealed class Application
 
     private JsonObject Doctor(bool includeTools)
     {
-        static JsonObject Check(string id, string status, JsonObject? details = null) =>
+        static JsonNode Check(string id, string status, JsonObject? details = null) =>
             Json.Merge(new JsonObject { ["id"] = id, ["status"] = status }, details);
         var tools = Catalog.PublicList(french: false);
         string registryHash = Json.Sha256(Json.Canonical(tools));
@@ -593,9 +593,9 @@ internal sealed class Application
         };
         bool failure = checks.OfType<JsonObject>().Any(entry => Json.Str(entry, "status") == "fail");
         var nextActions = new JsonArray();
-        nextActions.Add(silentAvailable
+        nextActions.Add((JsonNode)(silentAvailable
             ? Strings.T("Use silent_status to check the real InDesign process; the local doctor never starts InDesign.", "Utiliser silent_status pour vérifier le processus InDesign réel ; le doctor local ne démarre jamais InDesign.")
-            : Strings.T("Repair the silent channel (private storage, runtime) before any run.", "Réparer le canal silencieux (stockage privé, runtime) avant toute exécution."));
+            : Strings.T("Repair the silent channel (private storage, runtime) before any run.", "Réparer le canal silencieux (stockage privé, runtime) avant toute exécution.")));
         return new JsonObject
         {
             ["status"] = failure ? "error" : silentAvailable ? "ready-unverified" : "degraded",

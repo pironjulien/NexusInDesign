@@ -3,14 +3,29 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 
 namespace NexusInDesign;
 
+/// <summary>The few CLR types the engine serializes, with code generated at compile time (Native AOT, no reflection).</summary>
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(double))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal sealed partial class JsonContext : JsonSerializerContext;
+
 /// <summary>Small JSON helpers shared by the engine (System.Text.Json nodes only).</summary>
 internal static partial class Json
 {
-    public static readonly JsonSerializerOptions Compact = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    public static readonly JsonSerializerOptions Compact = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = JsonContext.Default,
+    };
+
+    private static readonly JsonTypeInfo<string> CompactString = (JsonTypeInfo<string>)Compact.GetTypeInfo(typeof(string));
+    private static readonly JsonTypeInfo<double> CompactDouble = (JsonTypeInfo<double>)Compact.GetTypeInfo(typeof(double));
 
     [GeneratedRegex("^[a-f0-9]{16}$")] public static partial Regex StateToken();
     [GeneratedRegex("^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$")] public static partial Regex Uuid();
@@ -62,11 +77,11 @@ internal static partial class Json
         {
             null => "null",
             JsonNode node => node.ToJsonString(Compact),
-            string text => JsonSerializer.Serialize(text, Compact),
+            string text => JsonSerializer.Serialize(text, CompactString),
             bool flag => flag ? "true" : "false",
             long or int => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)!,
-            double number => JsonSerializer.Serialize(number, Compact),
-            _ => JsonSerializer.Serialize(value, Compact),
+            double number => JsonSerializer.Serialize(number, CompactDouble),
+            _ => throw new ArgumentException($"No JavaScript literal for {value.GetType().Name}.", nameof(value)),
         };
         return json.Replace("\u2028", "\\u2028", StringComparison.Ordinal).Replace("\u2029", "\\u2029", StringComparison.Ordinal);
     }
@@ -108,7 +123,7 @@ internal static partial class Json
                 {
                     if (!first) builder.Append(',');
                     first = false;
-                    builder.Append(JsonSerializer.Serialize(key, Compact)).Append(':');
+                    builder.Append(JsonSerializer.Serialize(key, CompactString)).Append(':');
                     WriteCanonical(builder, value);
                 }
                 builder.Append('}');

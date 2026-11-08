@@ -96,9 +96,9 @@ function Invoke-WhileHeld([string]$Staged, [string]$Target, [scriptblock]$Action
 function Get-Sha256([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 
 # The engine goes to versions\<version>-<first 16 hex digits of its SHA-256>, copied under a temporary name and renamed
-# into place in one step, then never modified: a session that runs it keeps a file that never changes under it (a
-# self-contained single-file .NET program reads its own file again each time it loads an assembly). Returns the
-# folder's name and whether this run wrote it.
+# into place in one step, then never modified: a session that runs it keeps a file that never changes under it (up to
+# 4.2.x the engine was a self-contained single-file .NET program, which reads its own file again each time it loads an
+# assembly; since 4.3.0 it is Native AOT). Returns the folder's name and whether this run wrote it.
 function Install-Engine([string]$Source, [string]$Version) {
     $hash = Get-Sha256 $Source
     $name = "$Version-$($hash.Substring(0, 16))"

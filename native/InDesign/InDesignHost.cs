@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 
@@ -148,7 +147,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
     private static string? RunOnStaThread(ScriptRun run)
     {
         var before = SnapshotProcesses();
-        object? application = null;
+        DispatchObject? application = null;
         bool outcomeKnown = false;
         Exception? operationError = null;
         string? result = null;
@@ -156,14 +155,15 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         {
             application = CreateApplication();
             string payload = run.Language == ScriptLanguage.Uxp ? run.ScriptPath : File.ReadAllText(run.ScriptPath);
-            object? value = Invoke(application, "DoScript", payload, run.Language == ScriptLanguage.Uxp ? UxpLanguage : JavaScriptLanguage);
-            result = value?.ToString();
+            object? value = application.Invoke("DoScript", payload, run.Language == ScriptLanguage.Uxp ? UxpLanguage : JavaScriptLanguage);
+            if (value is DispatchObject returned) returned.Dispose();
+            else result = value?.ToString();
             if (run.CompletionPath is not null) WaitForCompletion(application, run.CompletionPath, run.Timeout);
             outcomeKnown = true;
         }
         catch (Exception exception)
         {
-            operationError = exception is TargetInvocationException { InnerException: { } inner } ? inner : exception;
+            operationError = exception;
         }
         try
         {
@@ -175,7 +175,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         }
         finally
         {
-            if (application is not null && Marshal.IsComObject(application)) Marshal.FinalReleaseComObject(application);
+            application?.Dispose();
         }
         if (operationError is ToolError) throw operationError;
         if (operationError is not null)
@@ -187,28 +187,23 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         return result;
     }
 
-    private static object CreateApplication()
+    private static DispatchObject CreateApplication()
     {
         Exception? last = null;
         foreach (string progId in ProgIds)
         {
-            var type = Type.GetTypeFromProgID(progId, throwOnError: false);
-            if (type is null) continue;
-            try { return Activator.CreateInstance(type) ?? throw new InvalidOperationException(progId); }
-            catch (Exception exception) { last = exception; }
+            try
+            {
+                if (DispatchObject.Create(progId) is { } application) return application;
+            }
+            catch (Exception exception) when (exception is COMException or UnauthorizedAccessException or OutOfMemoryException or InvalidCastException) { last = exception; }
         }
         throw new ToolError("INDESIGN_NOT_REGISTERED",
             Strings.T("No compatible InDesign version (2024 to 2026) is registered for COM.", "Aucune version InDesign compatible (2024 à 2026) n’est enregistrée pour COM.")
             + (last is null ? "" : " " + last.Message));
     }
 
-    internal static object? Invoke(object target, string method, params object[] args) =>
-        target.GetType().InvokeMember(method, BindingFlags.InvokeMethod, null, target, args, System.Globalization.CultureInfo.InvariantCulture);
-
-    private static object? Get(object target, string property) =>
-        target.GetType().InvokeMember(property, BindingFlags.GetProperty, null, target, null, System.Globalization.CultureInfo.InvariantCulture);
-
-    private static void WaitForCompletion(object application, string completionPath, TimeSpan timeout)
+    private static void WaitForCompletion(DispatchObject application, string completionPath, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
         while (true)
@@ -230,8 +225,8 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         while (true)
         {
             bool modal;
-            try { modal = Convert.ToBoolean(Get(application, "ModalState"), System.Globalization.CultureInfo.InvariantCulture); }
-            catch (Exception exception) when (exception is COMException or TargetInvocationException) { modal = true; }
+            try { modal = Convert.ToBoolean(application.Get("ModalState"), System.Globalization.CultureInfo.InvariantCulture); }
+            catch (Exception exception) when (exception is COMException or InvalidCastException) { modal = true; }
             if (!modal) return;
             if (DateTime.UtcNow >= quiet)
                 throw new ToolError("UXP_OUTCOME_UNKNOWN", Strings.T("InDesign stays modal after the UXP result; outcome unknown.", "InDesign reste en état modal après le résultat UXP ; issue indéterminée."), true);
@@ -244,7 +239,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
     /// dialog once the outcome is known, is closed again; a hidden InDesign that keeps documents is shown; a visible one
     /// is left as it is. Nothing is ever killed.
     /// </summary>
-    private static void DisposeHost(object application, IReadOnlyList<HostProcess> before, bool outcomeKnown)
+    private static void DisposeHost(DispatchObject application, IReadOnlyList<HostProcess> before, bool outcomeKnown)
     {
         var after = SnapshotProcesses();
         var created = after.Where(process => !before.Any(old => old.ProcessId == process.ProcessId && old.StartedAtUtc == process.StartedAtUtc)).ToList();
@@ -255,19 +250,17 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
         bool modal = true;
         try
         {
-            object? collection = Get(application, "Documents");
-            if (collection is not null)
+            if (application.Get("Documents") is DispatchObject collection)
             {
-                documents = Convert.ToInt32(Get(collection, "Count"), System.Globalization.CultureInfo.InvariantCulture);
-                if (Marshal.IsComObject(collection)) Marshal.FinalReleaseComObject(collection);
+                using (collection) documents = Convert.ToInt32(collection.Get("Count"), System.Globalization.CultureInfo.InvariantCulture);
             }
-            modal = Convert.ToBoolean(Get(application, "ModalState"), System.Globalization.CultureInfo.InvariantCulture);
+            modal = Convert.ToBoolean(application.Get("ModalState"), System.Globalization.CultureInfo.InvariantCulture);
         }
-        catch (Exception exception) when (exception is COMException or TargetInvocationException) { }
+        catch (Exception exception) when (exception is COMException or InvalidCastException) { }
         if (owned && outcomeKnown && documents == 0 && !modal)
         {
-            try { Invoke(application, "Quit"); }
-            catch (Exception exception) when (exception is COMException or TargetInvocationException)
+            try { application.Invoke("Quit"); }
+            catch (COMException exception)
             {
                 throw new ToolError("INDESIGN_HOST_QUIT_FAILED", Strings.T("InDesign did not accept closing its COM host.", "InDesign n’a pas accepté la fermeture de son hôte COM."), false, exception);
             }
@@ -279,8 +272,8 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
             }
             throw new ToolError("INDESIGN_HOST_EXIT_UNCONFIRMED", Strings.T("The InDesign process created by this call is still running; no forced termination was attempted.", "Le processus InDesign créé par cet appel reste actif ; aucune terminaison forcée n’a été tentée."));
         }
-        try { Invoke(application, "Activate"); }
-        catch (Exception exception) when (exception is COMException or TargetInvocationException)
+        try { application.Invoke("Activate"); }
+        catch (COMException exception)
         {
             throw new ToolError("INDESIGN_HOST_ACTIVATION_FAILED", Strings.T("InDesign did not accept its visible activation.", "InDesign n’a pas accepté son activation visible."), false, exception);
         }

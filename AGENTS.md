@@ -11,6 +11,13 @@
   never in Git. Logs hold no document text, full path or secret.
 - The server starts only under an allowed agent process chain (Claude Code, Codex): name, folder and signature checked.
   Tests inject their own parent verifier; there is no bypass switch.
+- The engine and its launcher are Native AOT: AI sessions keep their MCP server running for hours while updates
+  replace it, and a single-file .NET exe loads code from its own file later on (`UpdateWhileRunningTests`). No
+  reflection: COM through `InDesign/Dispatch.cs` (generated `IDispatch`), JSON through `JsonContext`, P/Invoke through
+  `LibraryImport` with blittable structures. A `JsonArray.Add` or collection expression of a `JsonObject` must be cast
+  to `JsonNode` (the generic overload is not AOT-safe); the AOT publish fails on any such warning. Publishing needs the
+  C++ linker, found through `vswhere`: `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer` on `PATH`
+  (tools/package.ps1 and the tests add it).
 - The `nexus-indesign` skill (`plugin/skills`) serves Codex and Claude Code: no instruction specific to one agent.
 - After a significant change: update `CHANGELOG.md` (English, Keep a Changelog), run `test.ps1`, check the diff and
   the absence of secrets, then commit precise files with an English message.

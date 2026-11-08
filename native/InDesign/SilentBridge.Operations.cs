@@ -289,7 +289,7 @@ internal sealed partial class SilentBridge
             if (inspected is null || Json.Long(inspected, "documentId") != id || Json.Long(inspected, "revision") != Json.Long(document, "revision")
                 || !Json.StateToken().IsMatch(Json.Str(inspected, "stateToken") ?? ""))
                 throw Fail("DOCUMENT_SNAPSHOT_INVALID", Strings.T("The stable inspection of the document failed.", "L’inspection stable du document a échoué."), true);
-            snapshots.Add(new JsonObject { ["documentId"] = id, ["revision"] = Json.Long(inspected, "revision"), ["stateToken"] = Json.Str(inspected, "stateToken") });
+            snapshots.Add((JsonNode)new JsonObject { ["documentId"] = id, ["revision"] = Json.Long(inspected, "revision"), ["stateToken"] = Json.Str(inspected, "stateToken") });
         }
         return snapshots;
     }
@@ -332,12 +332,12 @@ internal sealed partial class SilentBridge
                 string token = Json.Str(document, "stateToken")!;
                 await CreateBackup(id, revision, backupPath, backupId).ConfigureAwait(false);
                 var verified = (await InspectDocument(id).ConfigureAwait(false))["document"] as JsonObject;
-                AssertStableSnapshots([document.DeepClone()], [new JsonObject
+                AssertStableSnapshots([document.DeepClone()], [(JsonNode)new JsonObject
                 {
                     ["documentId"] = Json.Long(verified, "documentId"), ["revision"] = Json.Long(verified, "revision"), ["stateToken"] = Json.Str(verified, "stateToken"),
                 }], Strings.T("The document changed during its backup.", "Le document a changé pendant sa sauvegarde."));
                 var metadata = WriteBackupMetadata(backupId, backupPath, id, revision, token);
-                safetyBackups.Add(new JsonObject
+                safetyBackups.Add((JsonNode)new JsonObject
                 {
                     ["documentId"] = id, ["revision"] = revision, ["stateToken"] = token, ["backupId"] = backupId, ["backupPath"] = backupPath,
                     ["metadataPath"] = metadata["metadataPath"]?.DeepClone(), ["artifactSha256"] = metadata["artifact"]?["sha256"]?.DeepClone(),
@@ -782,7 +782,7 @@ internal sealed partial class SilentBridge
                 long backupDocumentId = Json.Long(backup, "documentId") ?? 0, revision = Json.Long(backup, "revision") ?? -1;
                 string token = Json.Str(backup, "stateToken") ?? "";
                 var metadata = WriteBackupMetadata(slot.BackupId, slot.BackupPath, backupDocumentId, revision, token);
-                safetyBackups.Add(new JsonObject
+                safetyBackups.Add((JsonNode)new JsonObject
                 {
                     ["documentId"] = backupDocumentId, ["revision"] = revision, ["stateToken"] = token, ["backupId"] = slot.BackupId,
                     ["backupPath"] = slot.BackupPath, ["metadataPath"] = metadata["metadataPath"]?.DeepClone(),
