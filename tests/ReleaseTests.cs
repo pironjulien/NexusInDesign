@@ -133,9 +133,13 @@ public sealed class ReleaseTests : IDisposable
         bool stagedWhileHeld = false;
         using var released = new ManualResetEventSlim();
         using var watcher = new FileSystemWatcher(versions, ".new-*") { NotifyFilter = NotifyFilters.DirectoryName };
+        // Subscribed before the watcher starts raising events and before the installer runs: WaitForChanged inside the
+        // thread would subscribe only once the thread runs, and a creation in between was lost (held stayed null).
+        var created = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        watcher.Created += (_, e) => created.TrySetResult(e.FullPath);
         var scanner = new Thread(() =>
         {
-            string path = watcher.WaitForChanged(WatcherChangeTypes.Created, 60_000) is { TimedOut: false } change ? Path.Combine(versions, change.Name!) : "";
+            string path = created.Task.Wait(60_000) ? created.Task.Result : "";
             var deadline = Stopwatch.StartNew();
             while (held is null && path.Length > 0 && deadline.Elapsed < TimeSpan.FromSeconds(20) && Directory.Exists(path))
             {
