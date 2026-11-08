@@ -55,7 +55,7 @@ Une propriété inconnue se vérifie avec `search_official_dom` avant d'écrire 
 
 1. Vérifier le fichier DOCX réel et obtenir le mapping attendu entre styles Word et styles InDesign.
 2. Préparer la copie de travail, les styles de destination et le bloc ou flux de texte cible.
-3. Utiliser l'outil structuré de placement compatible, sans copier-coller ni réécrire le contenu.
+3. Placer le fichier par un script `run_layout_script` (méthode `place` du bloc ou du flux cible), sans copier-coller ni réécrire le contenu.
 4. Contrôler titres, paragraphes, listes, tableaux, notes, italiques, caractères spéciaux, sauts et images importées.
 5. Corriger le mapping de styles plutôt que chaque paragraphe. Signaler toute fonction Word non conservée.
 
@@ -79,5 +79,5 @@ Une propriété inconnue se vérifie avec `search_official_dom` avant d'écrire 
 1. Figer la révision à livrer et relire les ressources.
 2. Corriger polices absentes, liens manquants, résolution insuffisante, débordements, couleurs ou fonds perdus selon le cahier des charges.
 3. Lancer `preflight_document` avec le profil demandé.
-4. Si un runner versionné possède déjà la production et les exports, l'utiliser pour conserver la reproductibilité, puis vérifier ses artefacts avec le MCP. Sinon, utiliser `finalize_layout` pour le PDF final, ou un export structuré adapté pour PNG, IDML, EPUB ou assemblage.
+4. Si un runner versionné possède déjà la production et les exports, l'utiliser pour conserver la reproductibilité, puis vérifier ses artefacts avec le MCP. Sinon, utiliser `finalize_layout` pour le PDF final, ou un export structuré adapté pour PNG, IDML ou assemblage (`export_png`, `export_idml`, `package_document`).
 5. Rendre et inspecter l'artefact final, puis prouver l'aller-retour avec `compare_layout_snapshot`.

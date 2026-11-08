@@ -143,7 +143,7 @@ only. See [SECURITY.md](SECURITY.md) for the trust boundary and the safeguards.
 
 ```powershell
 .\test.ps1
-pwsh -File tools/package.ps1 -Version 4.1.4
+pwsh -File tools/package.ps1 -Version 4.3.0   # must match native/Program.cs
 ```
 
 `test.ps1` runs the xUnit suite against an emulated InDesign (no InDesign needed). The launcher is compiled with Native

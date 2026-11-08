@@ -1,6 +1,6 @@
 # Workflows de mise en page
 
-Cette couche compose les commandes UXP structurées déjà authentifiées. Elle n’ajoute aucun serveur, aucun transport HTTP et aucune exécution libre.
+Cette couche compose les outils structurés du moteur (modèles UXP exécutés par COM). Elle n’ajoute aucun serveur, aucun transport HTTP et aucune exécution libre.
 
 ## Outils
 
