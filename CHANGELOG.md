@@ -32,6 +32,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Test: the release build is started, its file renamed aside and replaced by other bytes the way an installer
   replaces an exe in use, and its tools (tool list, DOM index, doctor, schema validation) must still answer.
 
+### Fixed
+- Tests: processes started by tests always inherit the no-error-box mode. The runtime loads each native library
+  between a `SetErrorMode` and a restore of the previous mode, so parallel loads could leave the test process without
+  `SEM_NOGPFAULTERRORBOX` (seen once in CI); every test now starts its processes through a helper that sets the mode
+  again first, and the test checks a child started after that flag was removed.
+
 ## [4.2.3] - 2026-11-08
 
 ### Added

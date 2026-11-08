@@ -22,7 +22,7 @@ public sealed class EngineUnitTests : IDisposable
 
     internal static void Junction(string link, string target)
     {
-        using var process = Process.Start(new ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{target}\"") { CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true })!;
+        using var process = NoErrorBoxes.Start(new ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{target}\"") { CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true });
         process.WaitForExit();
         Assert.Equal(0, process.ExitCode);
     }

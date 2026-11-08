@@ -22,7 +22,7 @@ internal static class Packages
         // Native AOT links with the Visual C++ tools, which it finds through vswhere.exe.
         string vswhere = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer");
         info.Environment["PATH"] = Environment.GetEnvironmentVariable("PATH") + Path.PathSeparator + vswhere;
-        using var process = Process.Start(info)!;
+        using var process = NoErrorBoxes.Start(info);
         var stdout = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(900_000) || process.ExitCode != 0) throw new InvalidOperationException($"dotnet publish {Path.GetFileName(project)} failed: " + stdout.Result + error.Result);
@@ -79,7 +79,7 @@ internal static class Packages
         info.Environment["NEXUS_INDESIGN_HOME"] = home;
         info.Environment["NEXUS_PACK"] = "1";
         info.Environment.Remove("NEXUS_RELEASE_TAG");
-        using var process = Process.Start(info)!;
+        using var process = NoErrorBoxes.Start(info);
         process.StandardInput.Close();
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();

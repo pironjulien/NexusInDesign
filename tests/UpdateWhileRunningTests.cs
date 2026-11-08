@@ -73,7 +73,7 @@ public sealed class UpdateWhileRunningTests : IDisposable
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_NAMES"] = "dotnet.exe";
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_SIGNERS"] = "Microsoft Corporation";
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_PATHS"] = SignedAncestorFolder();
-        using var server = Process.Start(info)!;
+        using var server = NoErrorBoxes.Start(info);
         var errors = server.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
         try
         {
@@ -135,7 +135,7 @@ public sealed class UpdateWhileRunningTests : IDisposable
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_NAMES"] = "dotnet.exe";
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_SIGNERS"] = "Microsoft Corporation";
         info.Environment["INDESIGN_MCP_ALLOWED_PARENT_PATHS"] = SignedAncestorFolder();
-        using var server = Process.Start(info)!;
+        using var server = NoErrorBoxes.Start(info);
         var errors = server.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
         try
         {
