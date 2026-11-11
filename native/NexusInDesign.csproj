@@ -29,7 +29,7 @@
     <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="10.0.15" />
     <PackageReference Include="JsonSchema.Net" Version="9.6.0" />
     <!-- GDI+ (Windows) downscales the preview PNGs into the capped thumbnails returned as MCP image content. -->
-    <PackageReference Include="System.Drawing.Common" Version="10.0.14" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.15" />
     <EmbeddedResource Include="tool-contracts.json" LogicalName="tool-contracts.json" />
     <!-- French titles and descriptions, kept in the main assembly (not a satellite) despite the .fr suffix. -->
     <EmbeddedResource Include="tool-contracts.fr.json" LogicalName="tool-contracts.fr.json" WithCulture="false" />

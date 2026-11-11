@@ -95,15 +95,15 @@
       },
       "Microsoft.Win32.SystemEvents": {
         "type": "Transitive",
-        "resolved": "10.0.14",
-        "contentHash": "axfieK5mj+uS/wLYl0dhlRFWdNP1iKHhx/M6DZNXPCSve7q4TCogw//W6BWGsYhnWuSw55aqheHE0a8l8s1oTw=="
+        "resolved": "10.0.15",
+        "contentHash": "kisX7LaeY4exvIgeyRfIp+xUmz2JoL+2n7pZv4W6na115P8659zw6vfB7IxD4sk6g9YZHwJ+vMzgS3Y5GMJqkA=="
       },
       "System.Drawing.Common": {
         "type": "Transitive",
-        "resolved": "10.0.14",
-        "contentHash": "kBe75KgVcm8soY0BPd5vTSLfC5vjd0O1YN6ApsL4qWnQiLUsOQ2k+PjWwraOI7JEp36mksavW/qz/r0NoSzYuQ==",
+        "resolved": "10.0.15",
+        "contentHash": "ecd2daLWqjQSGoMnvfITWsJkZWyUbrHyVwwVElLjcAO+POirHOVoM/ITrvj8UrdPXlY6Gb8IV3ZQARbEi4brCg==",
         "dependencies": {
-          "Microsoft.Win32.SystemEvents": "10.0.14"
+          "Microsoft.Win32.SystemEvents": "10.0.15"
         }
       },
       "System.Security.AccessControl": {
@@ -185,7 +185,7 @@
           "JsonSchema.Net": "[9.6.0, )",
           "Microsoft.DotNet.ILCompiler": "[10.0.15, )",
           "Microsoft.NET.ILLink.Tasks": "[10.0.15, )",
-          "System.Drawing.Common": "[10.0.14, )"
+          "System.Drawing.Common": "[10.0.15, )"
         }
       }
     }
