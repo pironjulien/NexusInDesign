@@ -1,7 +1,7 @@
 {
   "name": "nexus-indesign",
   "displayName": "NexusInDesign",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "description": "Adobe InDesign for Claude Code and Codex through its COM automation only (no panel, no UXP plugin, no network): open, script, preview, preflight and export, every change backed up and checked. Starts the native NexusInDesign engine installed by NexusSystem (or NexusInDesign's get.ps1).",
   "author": {
     "name": "Julien Piron",

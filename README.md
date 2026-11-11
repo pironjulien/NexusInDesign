@@ -67,7 +67,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\get.ps1
 
 It installs `%USERPROFILE%\.nexus\nexus-indesign\NexusInDesign.exe` (no administrator rights), the path both plugins
 start: a small native launcher that runs the engine of the current version from `versions\<version>-<hash>\`, a folder
-never modified once written, so a conversation already open keeps working through an update. Run it again to update; `-Remove` removes the program and keeps backups and the audit journal. Claude Desktop
+never modified once written, so a conversation already open keeps working through an update; an older version's folder
+is removed once no conversation runs it any more, at the next conversation start. Run it again to update; `-Remove` removes the program and keeps backups and the audit journal. Claude Desktop
 can also use the MCP bundle (`nexus-indesign-<version>-win-x64.mcpb` or `-win-arm64.mcpb`) of each release.
 
 </details>
@@ -143,7 +144,7 @@ only. See [SECURITY.md](SECURITY.md) for the trust boundary and the safeguards.
 
 ```powershell
 .\test.ps1
-pwsh -File tools/package.ps1 -Version 4.3.0   # must match native/Program.cs
+pwsh -File tools/package.ps1 -Version 4.3.1   # must match native/Program.cs
 ```
 
 `test.ps1` runs the xUnit suite against an emulated InDesign (no InDesign needed). The launcher is compiled with Native

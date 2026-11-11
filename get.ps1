@@ -14,7 +14,8 @@
 #   NexusInDesign.exe                             the launcher (Native AOT) the plugins start: it runs the engine
 #                                                 current.txt names
 # A session already open keeps running its own engine, whose file never changes under it; an older version's folder is
-# removed by a later run once no process runs its engine any more. Run it again to update.
+# removed once no process runs its engine any more, by a later run or by the launcher when a session starts (4.3.1).
+# Run it again to update.
 # NEXUS_PACK=1 (the Nexus pack): no question, no window; exit code 0 on success; a last "NEXUS_PACK_RESULT ..." line.
 # NEXUS_RELEASE_TAG: install that release (vX.Y.Z or vX.Y.Z-dev.N) instead of the latest.
 # For tests only: NEXUS_INDESIGN_SOURCE (a local zip instead of the latest release) and NEXUS_INDESIGN_HOME (another

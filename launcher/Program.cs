@@ -11,11 +11,12 @@ namespace NexusInDesign.Launcher;
 /// time it loads an assembly: an update that replaced that file under a running session broke every later call of
 /// that session. get.ps1 now writes each version to a folder of its own, never modified afterwards, switches
 /// current.txt to it, and removes an older folder only once no process runs its engine any more. The engine exits when
-/// this launcher ends (its parent watchdog).
+/// this launcher ends (its parent watchdog). Once a session's engine has started (--mcp), the launcher removes in the
+/// background what older versions left behind (<see cref="Leftovers"/>).
 /// </summary>
 internal static partial class Program
 {
-    internal const string Pointer = "current.txt";
+    internal const string Pointer = Leftovers.Pointer;
 
     private static int Main(string[] args)
     {
@@ -30,7 +31,9 @@ internal static partial class Program
             }
             try
             {
-                return Run(engine, args);
+                // Only for a session: get.ps1 runs the launcher (--version) while it installs, and rolls back to the
+                // previous version if that check fails.
+                return Run(engine, args, args.Contains("--mcp", StringComparer.Ordinal) ? () => Leftovers.Start(home) : null);
             }
             catch (Win32Exception) when (attempt == 1 && !File.Exists(engine))
             {
@@ -59,19 +62,9 @@ internal static partial class Program
                 Thread.Sleep(50);
             }
         }
-        if (!IsVersionFolder(name)) return null;
+        if (!Leftovers.IsVersionFolder(name)) return null;
         string engine = Path.Combine(home, "versions", name, "NexusInDesign.exe");
         return File.Exists(engine) ? engine : null;
-    }
-
-    /// <summary>A folder name of the form 1.2.3-0123456789abcdef (version and start of the engine's SHA-256).</summary>
-    internal static bool IsVersionFolder(string name)
-    {
-        int dash = name.IndexOf('-', StringComparison.Ordinal);
-        if (dash <= 0 || name.Length - dash - 1 != 16) return false;
-        string[] parts = name[..dash].Split('.');
-        return parts.Length == 3 && parts.All(part => part.Length > 0 && part.All(char.IsAsciiDigit)) &&
-            name[(dash + 1)..].All(c => char.IsAsciiDigit(c) || c is >= 'a' and <= 'f');
     }
 
     /// <summary>One argument as CommandLineToArgvW reads it back.</summary>
@@ -92,9 +85,9 @@ internal static partial class Program
 
     /// <summary>
     /// Starts the engine on this process's own standard handles (the MCP pipes of Claude Code or Codex, or a console),
-    /// without a console window of its own, then waits for it.
+    /// without a console window of its own, then waits for it; <paramref name="started"/> runs once it has started.
     /// </summary>
-    private static unsafe int Run(string engine, string[] args)
+    private static unsafe int Run(string engine, string[] args, Action? started)
     {
         nint[] handles = [GetStdHandle(StdInput), GetStdHandle(StdOutput), GetStdHandle(StdError)];
         foreach (nint handle in handles)
@@ -115,6 +108,7 @@ internal static partial class Program
         try
         {
             CloseHandle(process.Thread);
+            started?.Invoke();
             WaitForSingleObject(process.Process, Infinite);
             return GetExitCodeProcess(process.Process, out uint code) ? unchecked((int)code) : 1;
         }
