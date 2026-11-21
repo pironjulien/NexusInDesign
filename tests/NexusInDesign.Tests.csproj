@@ -12,7 +12,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
     <ProjectReference Include="..\native\NexusInDesign.csproj" />
     <!-- The launcher's removal of older versions, tested on fake install folders. -->
     <Compile Include="..\launcher\Leftovers.cs" Link="Launcher\Leftovers.cs" />
