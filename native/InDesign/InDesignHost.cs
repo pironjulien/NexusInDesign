@@ -375,8 +375,7 @@ internal sealed class ComInDesignHost : IInDesignHost, IDisposable
 
         private static async Task<object?> WithBudget(Task<object?> task, TimeSpan budget)
         {
-            if (await Task.WhenAny(task, Task.Delay(budget)).ConfigureAwait(false) != task) throw new TimeoutException();
-            return await task.ConfigureAwait(false);
+            return await task.WaitAsync(budget).ConfigureAwait(false); // TimeoutException past the budget
         }
 
         public void AcquireMutex(string name)

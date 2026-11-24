@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Build: an InDesign call's time budget uses `WaitAsync` instead of racing the call against a `Task.Delay` that kept
+  its timer running (analyzer CA2027, an error since 2026-11-21, broke the build).
+
 ## [4.3.1] - 2026-11-11
 
 ### Fixed
