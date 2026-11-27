@@ -6,6 +6,10 @@
 
 **InDesign, driven by your AIs. No panel, no network.**
 
+> **Retired on 2026-11-27.** Adobe's official "Adobe for Creativity" connector now covers InDesign. NexusInDesign is no
+> longer offered or updated by NexusSystem, and this repository is archived (read only). An existing installation keeps
+> working as it is.
+
 Adobe InDesign 2024 to 2026 for Claude Code and Codex, through one native Windows engine and InDesign's own COM
 automation: every change checked, every document backed up first, every export verified.
 
