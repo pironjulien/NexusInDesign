@@ -1,5 +1,10 @@
 # Development instructions
 
+- Retired on 2026-11-27 (Julien's decision): barely used, outside the AI core of the Nexus ecosystem; Adobe's official
+  "Adobe for Creativity" connector covers InDesign in the cloud and a local version for the desktop apps was announced
+  (Adobe MAX, 2026-11-10). No new features or releases; NexusSystem no longer offers it; the workstation sync removes it
+  from the PCs and keeps the backups.
+
 - Target Adobe InDesign 2024 to 2026 and .NET 10. The engine drives InDesign only through COM (`DoScript`, UXP under
   `NEVER_INTERACT`): no Node.js, no Adobe UXP plugin, no network listener.
 - Structured, validated tools come first; `run_layout_script` (backup, script, preview in one pass) is the normal way to

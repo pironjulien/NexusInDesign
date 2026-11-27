@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Deprecated
+- NexusInDesign is retired (2026-11-27): no new features or releases, and NexusSystem no longer offers it. Adobe's
+  official "Adobe for Creativity" connector covers InDesign, and Adobe has announced a version that drives the desktop
+  apps. An existing installation keeps working; `get.ps1 -Remove` removes it and keeps the backups.
+
 ### Fixed
 - Build: an InDesign call's time budget uses `WaitAsync` instead of racing the call against a `Task.Delay` that kept
   its timer running (analyzer CA2027, an error since 2026-11-21, broke the build).

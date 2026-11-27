@@ -18,11 +18,16 @@ automation: every change checked, every document backed up first, every export v
 [![MCP](https://img.shields.io/badge/MCP-server-6E56CF?style=flat-square)](https://modelcontextprotocol.io)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[![Get it with NexusSystem](https://img.shields.io/badge/Microsoft_Store-Get_NexusSystem-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NSH2P3QLWT1)
-
-[🌐 Website](https://julienpiron.fr/nexusindesign/) · [📦 Get it with NexusSystem](https://github.com/pironjulien/NexusSystem) · [📝 Changelog](CHANGELOG.md)
+[🌐 Website](https://julienpiron.fr/nexusindesign/) · [📝 Changelog](CHANGELOG.md)
 
 </div>
+
+> [!CAUTION]
+> **Retired on 2026-11-27.** NexusInDesign gets no new features or releases, and NexusSystem no longer offers it.
+> Adobe's official "Adobe for Creativity" connector covers InDesign, and Adobe has announced a version that drives the
+> desktop apps. An installation already on your PC keeps working as it is. To remove it, run `get.ps1 -Remove` from
+> the latest release (your backups and audit journal stay in `%USERPROFILE%\.nexus\nexus-indesign\private`), then
+> remove the `nexus-indesign` plugin from Claude Code or Codex.
 
 ## ✨ Why NexusInDesign
 
